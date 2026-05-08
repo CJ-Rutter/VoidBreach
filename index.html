@@ -1,0 +1,3165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Void Breach</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  body {
+    font-family: 'Courier New', monospace;
+    background: #000;
+    color: #0ff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: 8px;
+    padding-bottom: 30px;
+    touch-action: manipulation;
+    background-image: 
+      radial-gradient(ellipse at top, #001428 0%, #000 60%),
+      linear-gradient(to bottom, transparent 0%, transparent 100%);
+  }
+  
+  /* Grid overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      linear-gradient(rgba(0,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,255,0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  h1 {
+    text-align: center;
+    font-size: 1.6em;
+    margin-bottom: 4px;
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+    letter-spacing: 3px;
+  }
+  
+  .subtitle {
+    text-align: center;
+    font-size: 0.75em;
+    color: #066;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+  
+  .panel {
+    background: rgba(0,20,40,0.8);
+    border: 1px solid #0ff;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 0 10px rgba(0,255,255,0.15), inset 0 0 10px rgba(0,255,255,0.05);
+  }
+  
+  .panel-title {
+    font-size: 0.75em;
+    color: #088;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgba(0,255,255,0.2);
+    padding-bottom: 4px;
+  }
+  
+  /* Top status bar */
+  .status-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  
+  .status-item {
+    background: rgba(0,20,40,0.8);
+    border: 1px solid #0ff;
+    border-radius: 4px;
+    padding: 6px 4px;
+    text-align: center;
+    box-shadow: 0 0 8px rgba(0,255,255,0.1);
+  }
+  
+  .status-label {
+    font-size: 0.6em;
+    color: #066;
+    letter-spacing: 1px;
+  }
+  
+  .status-value {
+    font-size: 0.9em;
+    color: #0ff;
+    font-weight: bold;
+    margin-top: 2px;
+  }
+  
+  /* Battle area */
+  .battle-area {
+    min-height: 200px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .battle-scene {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    min-height: 160px;
+    position: relative;
+  }
+  
+  .heroes-side, .enemies-side {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+  }
+  
+  .enemies-side {
+    align-items: flex-end;
+  }
+  
+  .unit {
+    background: rgba(0,30,50,0.7);
+    border: 1px solid #044;
+    border-radius: 4px;
+    padding: 5px 6px;
+    width: 100%;
+    max-width: 150px;
+    font-size: 0.7em;
+    transition: all 0.15s;
+    position: relative;
+  }
+  
+  .unit.hero {
+    border-color: #0ff;
+    box-shadow: 0 0 6px rgba(0,255,255,0.2);
+  }
+  
+  .unit.enemy {
+    border-color: #f55;
+    box-shadow: 0 0 6px rgba(255,85,85,0.2);
+  }
+  
+  .unit.boss {
+    border-color: #f0f;
+    box-shadow: 0 0 10px rgba(255,0,255,0.4);
+    background: rgba(40,0,30,0.8);
+  }
+  
+  .unit.dead {
+    opacity: 0.3;
+    filter: grayscale(1);
+  }
+  
+  .unit.attacking {
+    animation: attack 0.3s;
+  }
+  
+  .unit.hit {
+    animation: hit 0.3s;
+  }
+  
+  @keyframes attack {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(10px); }
+  }
+  
+  .enemy.attacking {
+    animation: attackR 0.3s;
+  }
+  
+  @keyframes attackR {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-10px); }
+  }
+  
+  @keyframes hit {
+    0%, 100% { background: rgba(0,30,50,0.7); }
+    50% { background: rgba(255,50,50,0.5); }
+  }
+  
+  .unit-icon {
+    font-size: 1.4em;
+    text-align: center;
+    margin-bottom: 2px;
+  }
+  
+  .unit-name {
+    text-align: center;
+    font-size: 0.9em;
+    color: #0ff;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .unit.enemy .unit-name {
+    color: #faa;
+  }
+  
+  .unit.boss .unit-name {
+    color: #f0f;
+  }
+  
+  .hp-bar {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #033;
+    height: 8px;
+    border-radius: 2px;
+    margin-top: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0f0, #0f8);
+    transition: width 0.3s;
+  }
+  
+  .enemy .hp-fill {
+    background: linear-gradient(90deg, #f00, #f80);
+  }
+  
+  .boss .hp-fill {
+    background: linear-gradient(90deg, #f0f, #80f);
+  }
+  
+  .shield-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #0ff, #08f);
+    opacity: 0.7;
+    transition: width 0.3s;
+  }
+  
+  .hp-text {
+    font-size: 0.85em;
+    text-align: center;
+    margin-top: 2px;
+    color: #0aa;
+  }
+  
+  /* Damage numbers */
+  .damage-num {
+    position: absolute;
+    font-weight: bold;
+    pointer-events: none;
+    animation: dmgFloat 0.8s ease-out forwards;
+    z-index: 10;
+    font-size: 0.9em;
+    text-shadow: 0 0 4px #000, 0 0 6px #000;
+  }
+  
+  @keyframes dmgFloat {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-40px); }
+  }
+  
+  /* Battle log */
+  .battle-log {
+    font-size: 0.7em;
+    max-height: 80px;
+    overflow-y: auto;
+    padding: 6px;
+    color: #0aa;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(0,255,255,0.2);
+    border-radius: 4px;
+  }
+  
+  .log-line {
+    margin-bottom: 2px;
+    animation: fadeIn 0.3s;
+  }
+  
+  .log-line.crit { color: #ff0; }
+  .log-line.boss { color: #f0f; }
+  .log-line.loot { color: #0f0; }
+  .log-line.chapter { color: #0ff; font-weight: bold; }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  /* Tabs */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  
+  .tab {
+    padding: 8px 2px;
+    background: rgba(0,20,40,0.8);
+    border: 1px solid #033;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.62em;
+    color: #077;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    touch-action: manipulation;
+  }
+  
+  .tab.active {
+    background: rgba(0,60,80,0.8);
+    border-color: #0ff;
+    color: #0ff;
+    box-shadow: 0 0 10px rgba(0,255,255,0.3);
+  }
+  
+  .tab[data-tab="prestige"].active {
+    background: rgba(60,0,80,0.8);
+    border-color: #c0f;
+    color: #d8f;
+    box-shadow: 0 0 10px rgba(192,0,255,0.3);
+  }
+  
+  .tab-panel {
+    display: none;
+  }
+  
+  .tab-panel.active {
+    display: block;
+  }
+  
+  /* Hero cards in squad tab */
+  .auto-equip-bar {
+    background: rgba(0,40,60,0.6);
+    border: 1px solid #0ff;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-shadow: 0 0 8px rgba(0,255,255,0.15);
+  }
+  
+  .auto-equip-info {
+    font-size: 0.7em;
+    color: #0aa;
+    flex: 1;
+    line-height: 1.3;
+  }
+  
+  .auto-equip-btn {
+    background: linear-gradient(135deg, rgba(0,80,80,0.6), rgba(0,40,80,0.6));
+    border: 1px solid #0ff;
+    color: #0ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.75em;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 1px;
+    touch-action: manipulation;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(0,255,255,0.3);
+  }
+  
+  .auto-equip-btn:active {
+    background: rgba(0,255,255,0.3);
+    transform: scale(0.97);
+  }
+  
+  .hero-card {
+    background: rgba(0,20,40,0.6);
+    border: 1px solid #0aa;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
+  }
+  
+  .hero-card.locked {
+    opacity: 0.5;
+  }
+  
+  .hero-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .hero-equipment {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,255,255,0.15);
+  }
+  
+  .equip-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 3px;
+    font-size: 0.7em;
+    border-left: 2px solid #444;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  .equip-slot.empty {
+    color: #044;
+    font-style: italic;
+    cursor: default;
+  }
+  
+  .equip-slot.rarity-common { border-left-color: #888; color: #ccc; }
+  .equip-slot.rarity-uncommon { border-left-color: #0f0; color: #0f0; }
+  .equip-slot.rarity-rare { border-left-color: #08f; color: #08f; }
+  .equip-slot.rarity-epic { border-left-color: #a0f; color: #c0f; }
+  .equip-slot.rarity-legendary { border-left-color: #fa0; color: #fa0; }
+  
+  .equip-slot:not(.empty) {
+    cursor: default;
+  }
+  
+  .equip-slot:not(.empty):active {
+    background: rgba(0,0,0,0.3);
+  }
+  
+  .slot-action {
+    flex-shrink: 0;
+    border: 1px solid;
+    background: rgba(0,0,0,0.4);
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 0.85em;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  .slot-action.upg-action {
+    border-color: #fa0;
+    color: #fa0;
+  }
+  
+  .slot-action.upg-action:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  
+  .slot-action.upg-action:not(:disabled):active {
+    background: rgba(255,170,0,0.3);
+  }
+  
+  .slot-action.unequip-action {
+    border-color: #f55;
+    color: #f88;
+    padding: 3px 7px;
+  }
+  
+  .slot-action.unequip-action:active {
+    background: rgba(255,85,85,0.3);
+  }
+  
+  .equip-slot-icon {
+    font-size: 1.1em;
+  }
+  
+  .equip-slot-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+  
+  .hero-portrait {
+    font-size: 2em;
+    width: 50px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  
+  .hero-info {
+    flex: 1;
+    font-size: 0.75em;
+  }
+  
+  .hero-info .name {
+    color: #0ff;
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+  
+  .hero-info .class {
+    color: #088;
+    font-size: 0.85em;
+  }
+  
+  .hero-info .stats {
+    color: #0aa;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  
+  .hero-info .stats .stat-boost {
+    color: #0f0;
+    font-size: 0.9em;
+  }
+  
+  .level-btn {
+    background: rgba(0,80,80,0.6);
+    border: 1px solid #0ff;
+    color: #0ff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.75em;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  .level-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  .level-btn:not(:disabled):active {
+    background: rgba(0,255,255,0.3);
+  }
+  
+  /* Loot items */
+  .quick-sell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  
+  .qs-btn {
+    padding: 7px 4px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.65em;
+    cursor: pointer;
+    touch-action: manipulation;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+  }
+  
+  /* Color-matched to rarity */
+  .qs-btn.qs-common {
+    background: rgba(120,120,120,0.25);
+    border-color: #aaa;
+    color: #ddd;
+  }
+  .qs-btn.qs-common:active { background: rgba(200,200,200,0.4); }
+  
+  .qs-btn.qs-uncommon {
+    background: rgba(0,80,0,0.35);
+    border-color: #0f0;
+    color: #0f0;
+  }
+  .qs-btn.qs-uncommon:active { background: rgba(0,255,0,0.3); }
+  
+  .qs-btn.qs-rare {
+    background: rgba(0,40,80,0.4);
+    border-color: #08f;
+    color: #4af;
+  }
+  .qs-btn.qs-rare:active { background: rgba(0,136,255,0.35); }
+  
+  .qs-btn.qs-all {
+    background: rgba(80,0,0,0.4);
+    border-color: #f55;
+    color: #f88;
+  }
+  .qs-btn.qs-all:active { background: rgba(255,85,85,0.3); }
+  
+  .loot-item {
+    background: rgba(0,20,40,0.6);
+    border: 1px solid #0aa;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75em;
+  }
+  
+  .loot-item.rarity-common { border-color: #888; }
+  .loot-item.rarity-uncommon { border-color: #0f0; box-shadow: 0 0 5px rgba(0,255,0,0.2); }
+  .loot-item.rarity-rare { border-color: #08f; box-shadow: 0 0 5px rgba(0,136,255,0.3); }
+  .loot-item.rarity-epic { border-color: #a0f; box-shadow: 0 0 5px rgba(170,0,255,0.4); }
+  .loot-item.rarity-legendary { border-color: #fa0; box-shadow: 0 0 8px rgba(255,170,0,0.5); }
+  
+  .loot-info .name { font-weight: bold; font-size: 1.05em; }
+  .loot-info .stats { color: #0aa; margin-top: 2px; font-size: 0.9em; }
+  .loot-info .loot-meta { color: #066; margin-top: 2px; font-size: 0.85em; }
+  
+  .rarity-common .name { color: #ccc; }
+  .rarity-uncommon .name { color: #0f0; }
+  .rarity-rare .name { color: #08f; }
+  .rarity-epic .name { color: #c0f; }
+  .rarity-legendary .name { color: #fa0; }
+  
+  .loot-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0,255,255,0.1);
+  }
+  
+  .loot-btn {
+    padding: 6px 4px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.7em;
+    cursor: pointer;
+    touch-action: manipulation;
+    border: 1px solid;
+    background: rgba(0,0,0,0.3);
+  }
+  
+  .loot-btn.equip { border-color: #0aa; color: #0ff; }
+  .loot-btn.upgrade { border-color: #fa0; color: #fa0; }
+  .loot-btn.sell { border-color: #0a0; color: #0f0; }
+  
+  .loot-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  
+  .loot-btn:not(:disabled):active {
+    filter: brightness(1.5);
+  }
+  
+  /* Story tab */
+  .stat-group {
+    background: rgba(0,20,40,0.5);
+    border: 1px solid rgba(0,255,255,0.15);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  
+  .stat-group-title {
+    color: #0ff;
+    font-size: 0.75em;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(0,255,255,0.2);
+  }
+  
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 0.8em;
+    border-bottom: 1px solid rgba(0,255,255,0.05);
+  }
+  
+  .stat-row:last-child {
+    border-bottom: none;
+  }
+  
+  .stat-row.sub {
+    padding: 3px 6px;
+    font-size: 0.75em;
+  }
+  
+  .stat-label {
+    color: #088;
+  }
+  
+  .stat-value {
+    color: #0ff;
+    font-weight: bold;
+  }
+  
+  .stat-row.sub .stat-label {
+    color: #0aa;
+  }
+  
+  .stat-row.sub .stat-value {
+    color: #0cc;
+  }
+  
+  /* Prestige panel */
+  .prestige-panel {
+    border-color: #c0f;
+    box-shadow: 0 0 10px rgba(192,0,255,0.2), inset 0 0 10px rgba(192,0,255,0.05);
+  }
+  
+  .prestige-panel .panel-title {
+    color: #d8f;
+    border-bottom-color: rgba(192,0,255,0.3);
+  }
+  
+  .prestige-summary {
+    background: linear-gradient(135deg, rgba(40,0,60,0.6), rgba(20,0,40,0.6));
+    border: 1px solid rgba(192,0,255,0.4);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  
+  .prestige-shards {
+    font-size: 1.6em;
+    color: #d8f;
+    font-weight: bold;
+    text-shadow: 0 0 12px rgba(216,128,255,0.6);
+    margin-bottom: 4px;
+  }
+  
+  .prestige-meta {
+    font-size: 0.7em;
+    color: #a8c;
+    line-height: 1.4;
+  }
+  
+  .prestige-action {
+    background: linear-gradient(135deg, rgba(60,0,100,0.6), rgba(80,0,40,0.6));
+    border: 1px solid rgba(192,0,255,0.4);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  
+  .prestige-action.ready {
+    border-color: #c0f;
+    box-shadow: 0 0 14px rgba(192,0,255,0.4);
+    animation: pulseReady 2s infinite ease-in-out;
+  }
+  
+  @keyframes pulseReady {
+    0%, 100% { box-shadow: 0 0 14px rgba(192,0,255,0.4); }
+    50% { box-shadow: 0 0 22px rgba(192,0,255,0.7); }
+  }
+  
+  .prestige-reward-info {
+    font-size: 0.85em;
+    color: #d8f;
+    margin-bottom: 8px;
+  }
+  
+  .prestige-reward-info .big {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #f8f;
+    text-shadow: 0 0 8px rgba(255,128,255,0.5);
+  }
+  
+  .prestige-warn {
+    font-size: 0.7em;
+    color: #faa;
+    margin: 8px 0;
+    line-height: 1.4;
+  }
+  
+  .prestige-btn {
+    background: linear-gradient(135deg, #804, #408);
+    border: 1px solid #f0f;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 2px;
+    touch-action: manipulation;
+    box-shadow: 0 0 12px rgba(255,0,255,0.4);
+  }
+  
+  .prestige-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #222;
+    border-color: #444;
+    box-shadow: none;
+  }
+  
+  .prestige-btn:not(:disabled):active {
+    transform: scale(0.97);
+  }
+  
+  .skill-branch {
+    background: rgba(20,0,30,0.4);
+    border: 1px solid rgba(192,0,255,0.2);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .skill-branch-title {
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(192,0,255,0.2);
+    letter-spacing: 1.5px;
+  }
+  
+  .skill-node {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(192,0,255,0.15);
+    border-radius: 3px;
+    padding: 8px;
+    margin-bottom: 5px;
+    font-size: 0.75em;
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+  }
+  
+  .skill-node.affordable {
+    border-color: rgba(192,0,255,0.5);
+    background: rgba(60,0,100,0.25);
+  }
+  
+  .skill-node.affordable:active {
+    background: rgba(192,0,255,0.3);
+  }
+  
+  .skill-node.maxed {
+    border-color: #fa0;
+    background: rgba(60,40,0,0.3);
+    cursor: default;
+  }
+  
+  .skill-node.unaffordable {
+    opacity: 0.55;
+  }
+  
+  .skill-info {
+    flex: 1;
+    pointer-events: none;
+  }
+  
+  .skill-name {
+    color: #d8f;
+    font-weight: bold;
+    margin-bottom: 2px;
+  }
+  
+  .skill-node.maxed .skill-name {
+    color: #fc6;
+  }
+  
+  .skill-desc {
+    color: #a8c;
+    font-size: 0.85em;
+    line-height: 1.3;
+  }
+  
+  .skill-progress {
+    color: #84a;
+    font-size: 0.85em;
+    margin-top: 2px;
+  }
+  
+  .skill-cost {
+    flex-shrink: 0;
+    text-align: right;
+    color: #d8f;
+    font-weight: bold;
+    margin-left: 8px;
+    pointer-events: none;
+  }
+  
+  .skill-node.maxed .skill-cost {
+    color: #fa0;
+  }
+  
+  /* Story tab */
+  .story-entry {
+    background: rgba(0,20,40,0.6);
+    border-left: 3px solid #0ff;
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 0.8em;
+    line-height: 1.5;
+    color: #0cc;
+  }
+  
+  .story-chapter-title {
+    color: #0ff;
+    font-weight: bold;
+    font-size: 1em;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+  
+  .story-body {
+    color: #0aa;
+    font-style: italic;
+  }
+  
+  /* Chapter progress */
+  .progress-panel {
+    text-align: center;
+  }
+  
+  .chapter-name {
+    font-size: 1em;
+    color: #0ff;
+    margin-bottom: 4px;
+  }
+  
+  .floor-display {
+    font-size: 0.8em;
+    color: #088;
+    margin-bottom: 6px;
+  }
+  
+  .progress-bar {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #0aa;
+    height: 10px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0ff, #08f);
+    transition: width 0.3s;
+  }
+  
+  /* Controls */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  
+  .ctrl-btn {
+    background: rgba(0,60,80,0.4);
+    border: 1px solid #0aa;
+    color: #0ff;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.8em;
+    cursor: pointer;
+    letter-spacing: 1px;
+    touch-action: manipulation;
+  }
+  
+  .ctrl-btn.danger {
+    border-color: #f55;
+    color: #f88;
+  }
+  
+  .ctrl-btn:active {
+    background: rgba(0,255,255,0.3);
+  }
+  
+  .version-info {
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,255,255,0.15);
+    text-align: center;
+    font-size: 0.7em;
+    letter-spacing: 1px;
+  }
+  
+  .version-label {
+    color: #066;
+    margin-right: 6px;
+  }
+  
+  .version-num {
+    color: #0ff;
+    font-weight: bold;
+  }
+  
+  /* Modal */
+  .modal-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .modal-bg.show {
+    display: flex;
+  }
+  
+  .modal {
+    background: linear-gradient(135deg, #001428, #002844);
+    border: 1px solid #0ff;
+    border-radius: 4px;
+    padding: 20px;
+    max-width: 340px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(0,255,255,0.4);
+  }
+  
+  .modal h2 {
+    color: #0ff;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    font-size: 1.1em;
+  }
+  
+  .modal p {
+    color: #0cc;
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .modal-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #0ff;
+    background: rgba(0,80,80,0.4);
+    color: #0ff;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.85em;
+    letter-spacing: 1px;
+    touch-action: manipulation;
+  }
+  
+  .modal-btn.cancel {
+    background: rgba(40,0,0,0.4);
+    border-color: #f55;
+    color: #f88;
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #0aa;
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>VOID BREACH</h1>
+  <div class="subtitle">▸ DEEP SPACE SALVAGE OPS ◂</div>
+  
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-label">CREDITS</div>
+      <div class="status-value"><span id="credits">0</span> CR</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">SCRAP</div>
+      <div class="status-value"><span id="scrap">0</span> ⚙</div>
+    </div>
+    <div class="status-item">
+      <div class="status-label">FLOOR</div>
+      <div class="status-value"><span id="floor">1</span></div>
+    </div>
+  </div>
+  
+  <div class="panel progress-panel">
+    <div class="chapter-name" id="chapterName">CH. 1 — THE DERELICT</div>
+    <div class="floor-display" id="floorInfo">Floor 1 of 10</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="chapterProgress" style="width:10%"></div>
+    </div>
+  </div>
+  
+  <div class="panel battle-area">
+    <div class="battle-scene" id="battleScene">
+      <div class="heroes-side" id="heroesSide"></div>
+      <div class="enemies-side" id="enemiesSide"></div>
+    </div>
+  </div>
+  
+  <div class="panel">
+    <div class="panel-title">▸ COMBAT LOG</div>
+    <div class="battle-log" id="battleLog"></div>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="squad">SQUAD</div>
+    <div class="tab" data-tab="loot">LOOT</div>
+    <div class="tab" data-tab="prestige">VOID</div>
+    <div class="tab" data-tab="stats">STATS</div>
+    <div class="tab" data-tab="story">STORY</div>
+    <div class="tab" data-tab="system">SYS</div>
+  </div>
+  
+  <div class="tab-panel active" id="tab-squad">
+    <div class="panel">
+      <div class="panel-title">▸ ACTIVE SQUAD</div>
+      <div id="squadList"></div>
+    </div>
+  </div>
+  
+  <div class="tab-panel" id="tab-loot">
+    <div class="panel">
+      <div class="panel-title">▸ INVENTORY</div>
+      <div id="lootList"></div>
+    </div>
+  </div>
+  
+  <div class="tab-panel" id="tab-stats">
+    <div class="panel">
+      <div class="panel-title">▸ COMBAT STATISTICS</div>
+      <div id="statsList"></div>
+    </div>
+  </div>
+  
+  <div class="tab-panel" id="tab-prestige">
+    <div class="panel prestige-panel">
+      <div class="panel-title">▸ VOID PROTOCOL</div>
+      <div id="prestigeContent"></div>
+    </div>
+  </div>
+  
+  <div class="tab-panel" id="tab-story">
+    <div class="panel">
+      <div class="panel-title">▸ MISSION LOG</div>
+      <div id="storyList"></div>
+    </div>
+  </div>
+  
+  <div class="tab-panel" id="tab-system">
+    <div class="panel">
+      <div class="panel-title">▸ GAME CONTROLS</div>
+      <div class="controls">
+        <button class="ctrl-btn" id="saveBtn">💾 SAVE</button>
+        <button class="ctrl-btn" id="loadBtn">📂 LOAD</button>
+        <button class="ctrl-btn" id="exportBtn">📤 EXPORT</button>
+        <button class="ctrl-btn" id="importBtn">📥 IMPORT</button>
+        <button class="ctrl-btn" id="reloadBtn">🔄 FORCE RELOAD</button>
+        <button class="ctrl-btn danger" id="resetBtn">⚠ RESET</button>
+      </div>
+      <div style="text-align:center;margin-top:10px;font-size:0.7em;color:#066;" id="saveStatus">Auto-save: every 15s</div>
+      <div class="version-info">
+        <span class="version-label">VOID BREACH</span>
+        <span class="version-num" id="versionNum">v0.1.00</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">TITLE</h2>
+    <p id="modalText"></p>
+    <textarea id="modalTextarea" style="display:none;width:100%;height:80px;margin-top:8px;background:rgba(0,0,0,0.4);color:#0ff;border:1px solid #0aa;border-radius:4px;padding:6px;font-family:monospace;font-size:0.65em;resize:none;"></textarea>
+    <div class="modal-buttons">
+      <button class="modal-btn cancel" id="modalCancel">CANCEL</button>
+      <button class="modal-btn" id="modalConfirm">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ GAME DATA ============
+
+const GAME_VERSION = '0.1.00';
+
+const HERO_CLASSES = [
+  {
+    id: 'marine',
+    name: 'Kess Vance',
+    class: 'Assault Marine',
+    icon: '🪖',
+    baseHp: 120,
+    baseAtk: 15,
+    baseSpd: 1.0, // attacks per second
+    unlocked: true,
+    unlockCost: 0,
+    desc: 'Veteran ground-pounder. Balanced fighter.'
+  },
+  {
+    id: 'engineer',
+    name: 'Dr. Nyx Oram',
+    class: 'Combat Engineer',
+    icon: '🔧',
+    baseHp: 80,
+    baseAtk: 22,
+    baseSpd: 0.8,
+    unlocked: false,
+    unlockCost: 500,
+    desc: 'High damage, low HP. Rapid tech weapons.'
+  },
+  {
+    id: 'medic',
+    name: 'Sera Bellis',
+    class: 'Field Medic',
+    icon: '💊',
+    baseHp: 100,
+    baseAtk: 8,
+    baseSpd: 1.2,
+    heal: 5, // heals allies each attack
+    unlocked: false,
+    unlockCost: 2000,
+    desc: 'Heals allies on each shot. Team support.'
+  },
+  {
+    id: 'psion',
+    name: 'Voss-7',
+    class: 'Psionic Operative',
+    icon: '🔮',
+    baseHp: 90,
+    baseAtk: 30,
+    baseSpd: 0.6,
+    crit: 0.25, // 25% crit chance for 2x damage
+    unlocked: false,
+    unlockCost: 10000,
+    desc: 'Psychic strikes with high crit chance.'
+  }
+];
+
+const ENEMY_TYPES = [
+  { id: 'scavenger', name: 'Scavenger Drone',     icon: '🤖', hpMult: 1.0,  atkMult: 1.0, credits: 3,  scrap: 1 },
+  { id: 'xeno',      name: 'Xeno Worker',         icon: '👾', hpMult: 1.3,  atkMult: 0.9, credits: 4,  scrap: 1 },
+  { id: 'hunter',    name: 'Void Hunter',         icon: '🦂', hpMult: 1.1,  atkMult: 1.4, credits: 5,  scrap: 2 },
+  { id: 'bruiser',   name: 'Plated Brute',        icon: '🦖', hpMult: 2.0,  atkMult: 0.8, credits: 8,  scrap: 3 },
+  { id: 'specter',   name: 'Phase Specter',       icon: '👻', hpMult: 0.9,  atkMult: 1.6, credits: 6,  scrap: 2 },
+  { id: 'swarm',     name: 'Swarmling',           icon: '🕷️', hpMult: 0.7,  atkMult: 0.7, credits: 2,  scrap: 1 },
+  { id: 'cyborg',    name: 'Rogue Cyborg',        icon: '🦿', hpMult: 1.5,  atkMult: 1.2, credits: 7,  scrap: 3 },
+  { id: 'abomination',name:'Void Abomination',    icon: '🐙', hpMult: 1.8,  atkMult: 1.3, credits: 10, scrap: 4 }
+];
+
+const BOSSES = [
+  { 
+    floor: 10, chapter: 1,
+    name: 'The Maw Overseer', icon: '👁️',
+    hpMult: 8, atkMult: 1.5,
+    mechanic: 'shield', shieldPct: 0.5, // regenerates shield at 50% hp
+    credits: 100, scrap: 25,
+    lootChance: 1.0, lootTier: 'rare',
+    desc: 'Regenerates shields at 50% HP. Break the shield fast!'
+  },
+  {
+    floor: 25, chapter: 2,
+    name: 'Hive Queen Zy\'kara', icon: '🦟',
+    hpMult: 12, atkMult: 1.8,
+    mechanic: 'summon', // summons swarmlings periodically
+    credits: 300, scrap: 60,
+    lootChance: 1.0, lootTier: 'epic',
+    desc: 'Summons Swarmlings. Clear adds quickly!'
+  },
+  {
+    floor: 50, chapter: 3,
+    name: 'Warlord Krex-Tor', icon: '👹',
+    hpMult: 20, atkMult: 2.5,
+    mechanic: 'enrage', enrageAt: 0.3, // +100% atk below 30%
+    credits: 800, scrap: 150,
+    lootChance: 1.0, lootTier: 'epic',
+    desc: 'Enrages below 30% HP, doubling damage.'
+  },
+  {
+    floor: 100, chapter: 4,
+    name: 'The Devourer', icon: '🌀',
+    hpMult: 40, atkMult: 3.5,
+    mechanic: 'lifesteal', // heals on hit
+    credits: 3000, scrap: 500,
+    lootChance: 1.0, lootTier: 'legendary',
+    desc: 'Steals life on every hit. Outpace the drain!'
+  },
+  {
+    floor: 200, chapter: 5,
+    name: 'Null-Sovereign Xal', icon: '💀',
+    hpMult: 100, atkMult: 5,
+    mechanic: 'all', // shield + summon + enrage
+    shieldPct: 0.6,
+    enrageAt: 0.25,
+    credits: 15000, scrap: 2500,
+    lootChance: 1.0, lootTier: 'legendary',
+    desc: 'The final horror. Uses every known mechanic.'
+  }
+];
+
+const CHAPTERS = [
+  { 
+    floor: 1, name: 'CH. 1 — THE DERELICT',
+    story: 'Long-range scans detect a massive derelict vessel drifting near the Kuiper Edge. Your squad boards the *Obsidian Wake*, a colony ship missing for 60 years. Life signs... inconsistent.'
+  },
+  { 
+    floor: 11, name: 'CH. 2 — THE HIVE',
+    story: 'Below decks you find what became of the colonists. Something hatched them. A Xeno hive has woven itself into the ship\'s ventilation. The Queen is nearby.'
+  },
+  {
+    floor: 26, name: 'CH. 3 — WARLORD\'S HOLD',
+    story: 'You breach into occupied territory — pirate raiders from the Krex clan have made this wreck their fortress. Their warlord wants your heads mounted.'
+  },
+  {
+    floor: 51, name: 'CH. 4 — THE VOID RIFT',
+    story: 'The deepest levels shouldn\'t exist. The ship\'s reactor was retrofitted with *something*. A tear in spacetime leaks horrors from beyond. And something is feeding.'
+  },
+  {
+    floor: 101, name: 'CH. 5 — NULL PROTOCOL',
+    story: 'At the ship\'s core, the truth: the *Obsidian Wake* wasn\'t lost. It was sent. The Sovereign waits, and it has been expecting you for sixty years.'
+  },
+  {
+    floor: 201, name: 'EPILOGUE — THE LONG VOID',
+    story: 'With the Sovereign destroyed, the rift collapses. But the void is vast, and the salvage contracts keep coming. Mission... ongoing.'
+  }
+];
+
+const LOOT_TABLES = {
+  weapon: [
+    { name: 'Salvaged Pistol', atk: 3, speed: 0 },
+    { name: 'Pulse Rifle', atk: 8, speed: 0 },
+    { name: 'Fusion Carbine', atk: 15, speed: 0.1 },
+    { name: 'Arc Cannon', atk: 28, speed: 0 },
+    { name: 'Void Blade', atk: 40, speed: 0.2 },
+    { name: 'Singularity Lance', atk: 80, speed: 0.3 }
+  ],
+  armor: [
+    { name: 'Patch Vest', hp: 20 },
+    { name: 'Kevlar Mesh', hp: 50 },
+    { name: 'Powered Plate', hp: 120 },
+    { name: 'Reactive Carapace', hp: 250 },
+    { name: 'Phaseshift Armor', hp: 500 },
+    { name: 'Null-Woven Exosuit', hp: 1200 }
+  ],
+  module: [
+    { name: 'Targeting Chip', atk: 2, hp: 10 },
+    { name: 'Kinetic Dampener', hp: 30, speed: 0.05 },
+    { name: 'Neural Link', atk: 8, speed: 0.1 },
+    { name: 'Quantum Core', atk: 20, hp: 80 },
+    { name: 'Void Crystal', atk: 50, hp: 150, speed: 0.15 }
+  ]
+};
+
+const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+// ============ PRESTIGE / SKILL TREE ============
+
+const PRESTIGE_MIN_FLOOR = 25;
+
+// Each skill: id, name, desc, branch, maxLevel, costs[], effect (used in formulas below)
+const SKILL_TREE = [
+  // ⚔ Combat branch
+  { id: 'sq_disc',  name: 'Squad Discipline', desc: '+5% squad max HP per level',
+    branch: 'combat', maxLevel: 5, costs: [1,2,4,8,16], effect: 'hp_pct', value: 0.05 },
+  { id: 'cal_aim',  name: 'Calibrated Aim', desc: '+5% squad attack damage per level',
+    branch: 'combat', maxLevel: 5, costs: [1,2,4,8,16], effect: 'atk_pct', value: 0.05 },
+  { id: 'trig_dis', name: 'Trigger Discipline', desc: '+5% squad attack speed per level',
+    branch: 'combat', maxLevel: 3, costs: [2,5,12], effect: 'spd_pct', value: 0.05 },
+  { id: 'crit_net', name: 'Critical Network', desc: '+3% squad-wide crit chance per level',
+    branch: 'combat', maxLevel: 3, costs: [3,7,15], effect: 'crit_chance', value: 0.03 },
+
+  // 💰 Economy branch
+  { id: 'salvage',  name: 'Salvage Protocols', desc: '+10% credits earned per level',
+    branch: 'economy', maxLevel: 5, costs: [1,2,4,8,16], effect: 'credits_pct', value: 0.10 },
+  { id: 'reclaim',  name: 'Scrap Reclamation', desc: '+10% scrap earned per level',
+    branch: 'economy', maxLevel: 5, costs: [1,2,4,8,16], effect: 'scrap_pct', value: 0.10 },
+  { id: 'bargain',  name: 'Bargain Hunter', desc: '-10% hero level/unlock costs per level',
+    branch: 'economy', maxLevel: 3, costs: [2,5,12], effect: 'hero_cost_reduce', value: 0.10 },
+  { id: 'forge',    name: 'Forge Mastery', desc: '-10% upgrade scrap costs per level',
+    branch: 'economy', maxLevel: 3, costs: [2,5,12], effect: 'upg_cost_reduce', value: 0.10 },
+
+  // 🎁 Loot branch
+  { id: 'lucky',    name: 'Lucky Find', desc: '+5% loot drop chance per level',
+    branch: 'loot', maxLevel: 5, costs: [1,2,4,8,16], effect: 'drop_chance', value: 0.05 },
+  { id: 'quality',  name: 'Quality Control', desc: '+15% chance to upgrade loot rarity per level',
+    branch: 'loot', maxLevel: 3, costs: [3,7,15], effect: 'rarity_upgrade', value: 0.15 },
+  { id: 'treasure', name: 'Treasure Hunter', desc: 'Items found start with +1 upgrade level per level',
+    branch: 'loot', maxLevel: 3, costs: [4,10,20], effect: 'item_start_upg', value: 1 },
+  { id: 'sell_pro', name: 'Auction Network', desc: '+15% sell value per level',
+    branch: 'loot', maxLevel: 3, costs: [2,5,12], effect: 'sell_pct', value: 0.15 }
+];
+
+const SKILL_BRANCHES = {
+  combat:  { name: '⚔ COMBAT',  color: '#ff6666' },
+  economy: { name: '💰 ECONOMY', color: '#ffd700' },
+  loot:    { name: '🎁 LOOT',   color: '#aa55ff' }
+};
+
+// Calculate shards earned from a given max floor (diminishing returns)
+function calculateShardReward(maxFloor) {
+  if (maxFloor < PRESTIGE_MIN_FLOOR) return 0;
+  // sqrt curve: floor 25 = 2 shards, 50 = 10, 100 = 18, 200 = 26, 500 = 44
+  return Math.floor(Math.sqrt(maxFloor - (PRESTIGE_MIN_FLOOR - 1)) * 2);
+}
+
+// Get current level of a skill
+function getSkillLevel(skillId) {
+  return (state.prestige && state.prestige.skills && state.prestige.skills[skillId]) || 0;
+}
+
+// Get total bonus value from a particular effect across all skills with that effect
+function getSkillBonus(effectName) {
+  let total = 0;
+  SKILL_TREE.forEach(s => {
+    if (s.effect === effectName) {
+      total += getSkillLevel(s.id) * s.value;
+    }
+  });
+  return total;
+}
+const RARITY_MULTS = [1.0, 1.5, 2.3, 3.5, 5.5];
+const RARITY_PREFIXES = {
+  common: '',
+  uncommon: 'Reinforced ',
+  rare: 'Precision ',
+  epic: 'Cataclysmic ',
+  legendary: 'Mythic '
+};
+
+// ============ GAME STATE ============
+
+let state = {
+  credits: 0,
+  scrap: 0,
+  floor: 1,
+  maxFloor: 1,
+  chapter: 1,
+  heroes: {
+    marine:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: true },
+    engineer: { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
+    medic:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
+    psion:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false }
+  },
+  inventory: [],
+  storyUnlocked: [1],
+  nextItemId: 1,
+  prestige: {
+    shards: 0,
+    totalShardsEarned: 0,
+    runs: 0,
+    skills: {} // { skill_id: level }
+  },
+  stats: {
+    startTime: Date.now(),
+    playtimeMs: 0,
+    enemiesKilled: 0,
+    bossesKilled: 0,
+    enemyKillsByType: {},
+    bossKillsByName: {},
+    damageDealt: 0,
+    damageTaken: 0,
+    biggestHit: 0,
+    crits: 0,
+    heroDeaths: 0,
+    lifetimeCredits: 0,
+    lifetimeScrap: 0,
+    itemsFound: 0,
+    itemsSold: 0,
+    itemsUpgraded: 0,
+    rarityCounts: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 },
+    floorsCleared: 0,
+    bossesEncountered: 0
+  }
+};
+
+// Combat runtime state
+let combat = {
+  heroUnits: [],
+  enemyUnits: [],
+  logLines: [],
+  isBoss: false,
+  bossMechanicTimer: 0
+};
+
+// ============ UTILITIES ============
+
+function ensureStats() {
+  if (!state.prestige) {
+    state.prestige = { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} };
+  }
+  if (!state.prestige.skills) state.prestige.skills = {};
+  
+  if (!state.stats) {
+    state.stats = {
+      startTime: Date.now(),
+      playtimeMs: 0,
+      enemiesKilled: 0,
+      bossesKilled: 0,
+      enemyKillsByType: {},
+      bossKillsByName: {},
+      damageDealt: 0,
+      damageTaken: 0,
+      biggestHit: 0,
+      crits: 0,
+      heroDeaths: 0,
+      lifetimeCredits: 0,
+      lifetimeScrap: 0,
+      itemsFound: 0,
+      itemsSold: 0,
+      itemsUpgraded: 0,
+      rarityCounts: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 },
+      floorsCleared: 0,
+      bossesEncountered: 0
+    };
+  }
+  // Backfill any missing keys
+  if (!state.stats.enemyKillsByType) state.stats.enemyKillsByType = {};
+  if (!state.stats.bossKillsByName) state.stats.bossKillsByName = {};
+  if (!state.stats.rarityCounts) state.stats.rarityCounts = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+}
+
+function format(n) {
+  if (n < 1000) return Math.floor(n).toString();
+  if (n < 1e6) return (n/1000).toFixed(1) + 'K';
+  if (n < 1e9) return (n/1e6).toFixed(2) + 'M';
+  return (n/1e9).toFixed(2) + 'B';
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randChoice(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function log(msg, cls) {
+  combat.logLines.push({ msg, cls: cls || '' });
+  if (combat.logLines.length > 30) combat.logLines.shift();
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('battleLog');
+  el.innerHTML = combat.logLines.map(l => 
+    `<div class="log-line ${l.cls}">▸ ${l.msg}</div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ============ HERO STATS ============
+
+function getHeroStats(heroId) {
+  const def = HERO_CLASSES.find(h => h.id === heroId);
+  const save = state.heroes[heroId];
+  const level = save.level;
+  
+  // Base + level scaling (15% per level compounding)
+  const levelMult = Math.pow(1.15, level - 1);
+  let hp = def.baseHp * levelMult;
+  let atk = def.baseAtk * levelMult;
+  let spd = def.baseSpd;
+  
+  // Equipment bonuses
+  ['weapon', 'armor', 'module'].forEach(slot => {
+    const item = save.equipment[slot];
+    if (item) {
+      const mult = RARITY_MULTS[item.rarity];
+      const upgMult = 1 + (item.upgrades || 0) * 0.20; // +20% per upgrade level
+      if (item.atk) atk += item.atk * mult * upgMult;
+      if (item.hp) hp += item.hp * mult * upgMult;
+      if (item.speed) spd += item.speed * mult * upgMult;
+    }
+  });
+  
+  // Prestige skill bonuses (apply as final percentage multipliers)
+  hp *= (1 + getSkillBonus('hp_pct'));
+  atk *= (1 + getSkillBonus('atk_pct'));
+  spd *= (1 + getSkillBonus('spd_pct'));
+  
+  return {
+    id: heroId,
+    def: def,
+    maxHp: Math.floor(hp),
+    atk: Math.floor(atk),
+    spd: spd,
+    level: level,
+    skillCritBonus: getSkillBonus('crit_chance') // applied per-attack in doAttack
+  };
+}
+
+function getHeroLevelCost(heroId) {
+  const level = state.heroes[heroId].level;
+  const baseCost = 50 * Math.pow(1.6, level - 1);
+  const reduction = Math.min(0.75, getSkillBonus('hero_cost_reduce'));
+  return Math.floor(baseCost * (1 - reduction));
+}
+
+function levelUpHero(heroId) {
+  const cost = getHeroLevelCost(heroId);
+  if (state.credits < cost) return;
+  state.credits -= cost;
+  state.heroes[heroId].level++;
+  setupCombat(); // refresh hero stats in combat
+  refreshAffordability();
+}
+
+function getHeroUnlockCost(heroId) {
+  const def = HERO_CLASSES.find(h => h.id === heroId);
+  const reduction = Math.min(0.75, getSkillBonus('hero_cost_reduce'));
+  return Math.floor(def.unlockCost * (1 - reduction));
+}
+
+function unlockHero(heroId) {
+  const cost = getHeroUnlockCost(heroId);
+  if (state.credits < cost) return;
+  state.credits -= cost;
+  state.heroes[heroId].unlocked = true;
+  setupCombat();
+  refreshAffordability();
+}
+
+// ============ COMBAT SETUP ============
+
+function getActiveHeroes() {
+  return HERO_CLASSES.filter(h => state.heroes[h.id].unlocked).map(h => getHeroStats(h.id));
+}
+
+function setupCombat() {
+  // Create hero units
+  combat.heroUnits = getActiveHeroes().map(h => ({
+    ...h,
+    hp: h.maxHp,
+    atkCooldown: Math.random() * (1 / h.spd), // stagger attacks
+    isHero: true,
+    dead: false
+  }));
+  
+  // Create enemies for current floor
+  combat.enemyUnits = generateEnemies(state.floor);
+  combat.isBoss = BOSSES.some(b => b.floor === state.floor);
+  combat.bossMechanicTimer = 0;
+  
+  renderUnits();
+}
+
+function generateEnemies(floor) {
+  // Check if this is a boss floor
+  const boss = BOSSES.find(b => b.floor === floor);
+  if (boss) {
+    const baseHp = 40 * Math.pow(1.25, floor);
+    const baseAtk = 8 * Math.pow(1.20, floor);
+    log(`⚠ BOSS ENCOUNTER: ${boss.name}`, 'boss');
+    log(boss.desc, 'boss');
+    state.stats.bossesEncountered++;
+    return [{
+      id: 'boss_' + floor,
+      name: boss.name,
+      icon: boss.icon,
+      maxHp: Math.floor(baseHp * boss.hpMult),
+      hp: Math.floor(baseHp * boss.hpMult),
+      atk: Math.floor(baseAtk * boss.atkMult),
+      spd: 0.9,
+      atkCooldown: 1.0,
+      credits: boss.credits,
+      scrap: boss.scrap,
+      isBoss: true,
+      boss: boss,
+      shield: 0,
+      maxShield: 0,
+      shieldUsed: false,
+      enraged: false,
+      dead: false
+    }];
+  }
+  
+  // Regular floor: 1-3 enemies based on floor
+  const count = Math.min(3, 1 + Math.floor(floor / 8));
+  const enemies = [];
+  
+  // Enemy pool expands with floors
+  const pool = ENEMY_TYPES.slice(0, Math.min(ENEMY_TYPES.length, 2 + Math.floor(floor / 5)));
+  
+  for (let i = 0; i < count; i++) {
+    const type = randChoice(pool);
+    const baseHp = 25 * Math.pow(1.22, floor);
+    const baseAtk = 5 * Math.pow(1.18, floor);
+    enemies.push({
+      id: type.id + '_' + i + '_' + Date.now(),
+      name: type.name,
+      icon: type.icon,
+      maxHp: Math.floor(baseHp * type.hpMult),
+      hp: Math.floor(baseHp * type.hpMult),
+      atk: Math.floor(baseAtk * type.atkMult),
+      spd: 0.9,
+      atkCooldown: Math.random() * 1.1,
+      credits: type.credits * Math.ceil(floor / 3),
+      scrap: type.scrap * Math.ceil(floor / 5),
+      type: type,
+      dead: false
+    });
+  }
+  return enemies;
+}
+
+// ============ COMBAT TICK ============
+
+const TICK_MS = 100;
+const TICK_SEC = TICK_MS / 1000;
+
+function combatTick() {
+  // Check win/loss
+  const heroesAlive = combat.heroUnits.filter(u => !u.dead);
+  const enemiesAlive = combat.enemyUnits.filter(u => !u.dead);
+  
+  if (heroesAlive.length === 0) {
+    // Defeat — rewind one floor (min 1)
+    log('✗ SQUAD DOWN — RETREATING', 'boss');
+    setTimeout(() => {
+      state.floor = Math.max(1, state.floor - 1);
+      updateChapter();
+      setupCombat();
+      renderStatus();
+      renderChapter();
+    }, 1500);
+    return;
+  }
+  
+  if (enemiesAlive.length === 0) {
+    // Victory!
+    let totalCred = 0, totalScrap = 0;
+    combat.enemyUnits.forEach(e => {
+      totalCred += e.credits;
+      totalScrap += e.scrap;
+    });
+    
+    // Apply prestige economy bonuses
+    totalCred = Math.floor(totalCred * (1 + getSkillBonus('credits_pct')));
+    totalScrap = Math.floor(totalScrap * (1 + getSkillBonus('scrap_pct')));
+    
+    state.credits += totalCred;
+    state.scrap += totalScrap;
+    state.stats.lifetimeCredits += totalCred;
+    state.stats.lifetimeScrap += totalScrap;
+    state.stats.floorsCleared++;
+    log(`✓ Cleared! +${totalCred} CR +${totalScrap}⚙`, 'loot');
+    
+    // Boss drops guaranteed loot
+    if (combat.isBoss) {
+      const boss = combat.enemyUnits[0].boss;
+      const item = generateLoot(state.floor, boss.lootTier);
+      state.inventory.push(item);
+      state.stats.itemsFound++;
+      state.stats.rarityCounts[RARITY_NAMES[item.rarity]]++;
+      log(`🎁 LEGENDARY DROP: ${item.displayName}`, 'loot');
+      
+      // Unlock next heroes after bosses
+      if (boss.chapter === 1 && !state.heroes.engineer.unlocked) {
+        // Make engineer affordable after first boss
+      }
+    } else if (Math.random() < 0.15 + state.floor * 0.002 + getSkillBonus('drop_chance')) {
+      // Regular enemies have chance to drop loot
+      const item = generateLoot(state.floor);
+      state.inventory.push(item);
+      state.stats.itemsFound++;
+      state.stats.rarityCounts[RARITY_NAMES[item.rarity]]++;
+      log(`🎁 ${item.displayName}`, 'loot');
+    }
+    
+    // Advance floor
+    state.floor++;
+    state.maxFloor = Math.max(state.maxFloor, state.floor);
+    updateChapter();
+    
+    setTimeout(() => {
+      setupCombat();
+      renderChapter();
+      refreshAffordability();
+    }, 1200);
+    return;
+  }
+  
+  // Boss mechanics
+  if (combat.isBoss && enemiesAlive.length > 0) {
+    const boss = enemiesAlive[0];
+    const bossDef = boss.boss;
+    const hpPct = boss.hp / boss.maxHp;
+    
+    // Shield mechanic
+    if ((bossDef.mechanic === 'shield' || bossDef.mechanic === 'all') && !boss.shieldUsed && hpPct <= (bossDef.shieldPct || 0.5)) {
+      boss.maxShield = Math.floor(boss.maxHp * 0.3);
+      boss.shield = boss.maxShield;
+      boss.shieldUsed = true;
+      log(`⚡ ${boss.name} raises a shield!`, 'boss');
+    }
+    
+    // Enrage mechanic
+    if ((bossDef.mechanic === 'enrage' || bossDef.mechanic === 'all') && !boss.enraged && hpPct <= (bossDef.enrageAt || 0.3)) {
+      boss.atk = Math.floor(boss.atk * 2);
+      boss.enraged = true;
+      log(`🔥 ${boss.name} ENRAGES! Damage doubled!`, 'boss');
+    }
+    
+    // Summon mechanic
+    if ((bossDef.mechanic === 'summon' || bossDef.mechanic === 'all')) {
+      combat.bossMechanicTimer += TICK_SEC;
+      if (combat.bossMechanicTimer >= 8 && combat.enemyUnits.filter(u => !u.dead).length < 3) {
+        combat.bossMechanicTimer = 0;
+        const baseHp = 25 * Math.pow(1.22, state.floor) * 0.3;
+        const baseAtk = 5 * Math.pow(1.18, state.floor) * 0.4;
+        combat.enemyUnits.push({
+          id: 'swarm_' + Date.now(),
+          name: 'Swarmling',
+          icon: '🕷️',
+          maxHp: Math.floor(baseHp),
+          hp: Math.floor(baseHp),
+          atk: Math.floor(baseAtk),
+          spd: 1.3,
+          atkCooldown: 0.5,
+          credits: 2,
+          scrap: 0,
+          dead: false
+        });
+        log(`🕷️ ${boss.name} summons Swarmling!`, 'boss');
+      }
+    }
+  }
+  
+  // Hero attacks
+  combat.heroUnits.forEach(hero => {
+    if (hero.dead) return;
+    hero.atkCooldown -= TICK_SEC;
+    if (hero.atkCooldown <= 0) {
+      hero.atkCooldown = 1 / hero.spd;
+      const target = combat.enemyUnits.find(u => !u.dead);
+      if (target) doAttack(hero, target);
+    }
+  });
+  
+  // Enemy attacks
+  combat.enemyUnits.forEach(enemy => {
+    if (enemy.dead) return;
+    enemy.atkCooldown -= TICK_SEC;
+    if (enemy.atkCooldown <= 0) {
+      enemy.atkCooldown = 1 / enemy.spd;
+      const target = combat.heroUnits.find(u => !u.dead);
+      if (target) doAttack(enemy, target);
+    }
+  });
+}
+
+function doAttack(attacker, defender) {
+  let dmg = attacker.atk;
+  let crit = false;
+  
+  // Hero crits — base crit (psion has natural) + prestige skill crit
+  if (attacker.isHero) {
+    const baseCrit = attacker.def.crit || 0;
+    const skillCrit = getSkillBonus('crit_chance');
+    const totalCrit = baseCrit + skillCrit;
+    if (totalCrit > 0 && Math.random() < totalCrit) {
+      dmg *= 2;
+      crit = true;
+    }
+  }
+  
+  // Variance ±15%
+  dmg = Math.floor(dmg * (0.85 + Math.random() * 0.3));
+  
+  // Track damage stats
+  if (attacker.isHero) {
+    state.stats.damageDealt += dmg;
+    if (dmg > state.stats.biggestHit) state.stats.biggestHit = dmg;
+    if (crit) state.stats.crits++;
+  } else {
+    state.stats.damageTaken += dmg;
+  }
+  
+  // Apply shield first if boss has one
+  if (defender.shield && defender.shield > 0) {
+    const shieldDmg = Math.min(defender.shield, dmg);
+    defender.shield -= shieldDmg;
+    dmg -= shieldDmg;
+    if (defender.shield <= 0 && shieldDmg > 0) {
+      log(`💥 ${defender.name}'s shield breaks!`, 'crit');
+    }
+  }
+  
+  defender.hp -= dmg;
+  
+  // Lifesteal (certain bosses)
+  if (!attacker.isHero && attacker.boss && (attacker.boss.mechanic === 'lifesteal' || attacker.boss.mechanic === 'all')) {
+    attacker.hp = Math.min(attacker.maxHp, attacker.hp + Math.floor(dmg * 0.3));
+  }
+  
+  // Medic heal
+  if (attacker.isHero && attacker.def.heal) {
+    const healAmount = Math.floor(attacker.def.heal * Math.pow(1.15, attacker.level - 1));
+    combat.heroUnits.forEach(h => {
+      if (!h.dead && h.id !== attacker.id) {
+        h.hp = Math.min(h.maxHp, h.hp + healAmount);
+      }
+    });
+  }
+  
+  // Death check
+  if (defender.hp <= 0) {
+    defender.hp = 0;
+    defender.dead = true;
+    if (!attacker.isHero) {
+      // Hero died
+      state.stats.heroDeaths++;
+      log(`${defender.def.name} is down!`, 'boss');
+    } else {
+      // Enemy/boss killed
+      if (defender.isBoss) {
+        state.stats.bossesKilled++;
+        const bname = defender.boss.name;
+        state.stats.bossKillsByName[bname] = (state.stats.bossKillsByName[bname] || 0) + 1;
+      } else {
+        state.stats.enemiesKilled++;
+        const tname = defender.type ? defender.type.name : defender.name;
+        state.stats.enemyKillsByType[tname] = (state.stats.enemyKillsByType[tname] || 0) + 1;
+      }
+    }
+  }
+  
+  showDamage(defender, dmg, crit);
+  animateAttack(attacker, defender);
+  renderUnits();
+}
+
+// ============ LOOT GENERATION ============
+
+function generateLoot(floor, forceTier) {
+  const slots = ['weapon', 'armor', 'module'];
+  const slot = randChoice(slots);
+  const baseList = LOOT_TABLES[slot];
+  const tierIdx = Math.min(baseList.length - 1, Math.floor(floor / 20));
+  const base = baseList[tierIdx];
+  
+  // Determine rarity
+  let rarity;
+  if (forceTier) {
+    rarity = RARITY_NAMES.indexOf(forceTier);
+  } else {
+    const r = Math.random();
+    const floorBonus = Math.min(0.3, floor * 0.003);
+    if (r < 0.02 + floorBonus * 0.1) rarity = 4; // legendary
+    else if (r < 0.08 + floorBonus * 0.3) rarity = 3; // epic
+    else if (r < 0.22 + floorBonus * 0.5) rarity = 2; // rare
+    else if (r < 0.50) rarity = 1; // uncommon
+    else rarity = 0; // common
+  }
+  
+  // Quality Control prestige skill: chance to upgrade rarity by 1 tier
+  const rarityUpgradeChance = getSkillBonus('rarity_upgrade');
+  if (rarityUpgradeChance > 0 && rarity < 4 && Math.random() < rarityUpgradeChance) {
+    rarity++;
+  }
+  
+  // Treasure Hunter: items start with bonus upgrade levels
+  const startingUpgrades = Math.floor(getSkillBonus('item_start_upg'));
+  
+  const item = {
+    id: state.nextItemId++,
+    slot: slot,
+    baseName: base.name,
+    rarity: rarity,
+    atk: base.atk || 0,
+    hp: base.hp || 0,
+    speed: base.speed || 0,
+    displayName: (RARITY_PREFIXES[RARITY_NAMES[rarity]] || '') + base.name,
+    floor: floor,
+    upgrades: startingUpgrades
+  };
+  
+  return item;
+}
+
+function equipItem(itemId, heroId) {
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  
+  // Unequip currently equipped item in that slot, return to inventory
+  const hero = state.heroes[heroId];
+  const current = hero.equipment[item.slot];
+  if (current) {
+    state.inventory.push(current);
+  }
+  
+  // Remove from inventory, equip
+  state.inventory = state.inventory.filter(i => i.id !== itemId);
+  hero.equipment[item.slot] = item;
+  
+  setupCombat();
+  refreshAffordability();
+}
+
+// Score an item's value to a specific hero. Higher = better for that hero.
+// Weights stats by how much that hero leans on them.
+function scoreItemForHero(item, heroDef) {
+  if (!item) return 0;
+  const mult = RARITY_MULTS[item.rarity];
+  const upgMult = 1 + (item.upgrades || 0) * 0.20;
+  const finalMult = mult * upgMult;
+  
+  // Stat weights based on hero base stats — higher base = higher relative weight
+  // Normalize so weights are roughly 0.5 - 2.0
+  const atkWeight = (heroDef.baseAtk / 15);   // marine baseline = 1.0
+  const hpWeight = (heroDef.baseHp / 100);    // medic baseline = 1.0
+  const spdWeight = heroDef.baseSpd * 50;     // speed is rare so weight it heavily
+  
+  let score = 0;
+  if (item.atk) score += item.atk * finalMult * atkWeight;
+  if (item.hp) score += item.hp * finalMult * hpWeight * 0.3; // HP is plentiful, weight lower
+  if (item.speed) score += item.speed * finalMult * spdWeight;
+  
+  return score;
+}
+
+function autoEquipBest() {
+  // Build a working pool of all available items: inventory + currently equipped
+  // Currently-equipped items go back into the pool so we can reshuffle optimally.
+  const pool = [...state.inventory];
+  
+  // Get unlocked heroes IN ORDER from HERO_CLASSES (which matches squad list display order)
+  const orderedHeroes = HERO_CLASSES.filter(h => state.heroes[h.id].unlocked);
+  
+  // Pull all currently-equipped items back into the pool
+  orderedHeroes.forEach(def => {
+    const hero = state.heroes[def.id];
+    ['weapon', 'armor', 'module'].forEach(slot => {
+      if (hero.equipment[slot]) {
+        pool.push(hero.equipment[slot]);
+        hero.equipment[slot] = null;
+      }
+    });
+  });
+  
+  // Now greedily assign best items to heroes top-down, slot by slot
+  let equipsMade = 0;
+  orderedHeroes.forEach(def => {
+    const hero = state.heroes[def.id];
+    ['weapon', 'armor', 'module'].forEach(slot => {
+      // Find candidate items for this slot still in the pool
+      const candidates = pool.filter(it => it.slot === slot);
+      if (candidates.length === 0) return;
+      
+      // Pick the highest-scoring item for this hero
+      let best = candidates[0];
+      let bestScore = scoreItemForHero(best, def);
+      for (let i = 1; i < candidates.length; i++) {
+        const score = scoreItemForHero(candidates[i], def);
+        if (score > bestScore) {
+          best = candidates[i];
+          bestScore = score;
+        }
+      }
+      
+      // Equip it
+      hero.equipment[slot] = best;
+      // Remove from pool
+      const idx = pool.indexOf(best);
+      pool.splice(idx, 1);
+      equipsMade++;
+    });
+  });
+  
+  // Anything left in the pool goes back to inventory
+  state.inventory = pool;
+  
+  log(`✦ Auto-equipped ${equipsMade} item(s) to your squad`, 'loot');
+  setupCombat();
+  refreshAffordability();
+}
+
+// ============ STORY ============
+
+function updateChapter() {
+  const newChapter = CHAPTERS.slice().reverse().find(c => state.floor >= c.floor);
+  if (newChapter) {
+    const chapterNum = CHAPTERS.indexOf(newChapter) + 1;
+    if (chapterNum !== state.chapter) {
+      state.chapter = chapterNum;
+      if (!state.storyUnlocked.includes(chapterNum)) {
+        state.storyUnlocked.push(chapterNum);
+        log(`📖 NEW CHAPTER: ${newChapter.name}`, 'chapter');
+        setTimeout(() => {
+          showModal(newChapter.name, newChapter.story, () => {});
+        }, 800);
+      }
+    }
+  }
+  renderStory();
+}
+
+// ============ RENDERING ============
+
+function renderStatus() {
+  document.getElementById('credits').textContent = format(state.credits);
+  document.getElementById('scrap').textContent = format(state.scrap);
+  document.getElementById('floor').textContent = state.floor;
+}
+
+// Re-renders any tab that displays affordability (upgrade/level/sell buttons).
+// Called whenever credits or scrap change so buttons enable/disable correctly.
+function refreshAffordability() {
+  renderStatus();
+  // Only refresh visible tabs to avoid wasted work
+  const squadActive = document.getElementById('tab-squad')?.classList.contains('active');
+  const lootActive = document.getElementById('tab-loot')?.classList.contains('active');
+  if (squadActive) renderSquad();
+  if (lootActive) renderLoot();
+}
+
+function renderChapter() {
+  const ch = CHAPTERS.slice().reverse().find(c => state.floor >= c.floor);
+  const chIdx = CHAPTERS.indexOf(ch);
+  const next = CHAPTERS[chIdx + 1];
+  
+  document.getElementById('chapterName').textContent = ch.name;
+  
+  if (next) {
+    const progress = (state.floor - ch.floor) / (next.floor - ch.floor);
+    document.getElementById('floorInfo').textContent = `Floor ${state.floor} • Next chapter at ${next.floor}`;
+    document.getElementById('chapterProgress').style.width = Math.min(100, progress * 100) + '%';
+  } else {
+    document.getElementById('floorInfo').textContent = `Floor ${state.floor} • Endless Void`;
+    document.getElementById('chapterProgress').style.width = '100%';
+  }
+}
+
+function renderUnits() {
+  const heroesEl = document.getElementById('heroesSide');
+  const enemiesEl = document.getElementById('enemiesSide');
+  heroesEl.innerHTML = '';
+  enemiesEl.innerHTML = '';
+  
+  combat.heroUnits.forEach(h => {
+    heroesEl.appendChild(renderUnit(h, 'hero'));
+  });
+  
+  combat.enemyUnits.forEach(e => {
+    const cls = e.isBoss ? 'boss' : 'enemy';
+    enemiesEl.appendChild(renderUnit(e, cls));
+  });
+}
+
+function renderUnit(unit, sideClass) {
+  const div = document.createElement('div');
+  div.className = `unit ${sideClass}${unit.dead ? ' dead' : ''}`;
+  div.id = 'unit-' + (unit.id || unit.def?.id);
+  
+  const name = unit.isHero ? unit.def.name : unit.name;
+  const icon = unit.isHero ? unit.def.icon : unit.icon;
+  const hpPct = (unit.hp / unit.maxHp) * 100;
+  
+  let shieldBar = '';
+  if (unit.shield && unit.shield > 0 && unit.maxShield) {
+    const shieldPct = (unit.shield / unit.maxShield) * 30; // shield is 30% of bar
+    shieldBar = `<div class="shield-fill" style="width:${shieldPct}%"></div>`;
+  }
+  
+  div.innerHTML = `
+    <div class="unit-icon">${icon}</div>
+    <div class="unit-name">${name}</div>
+    <div class="hp-bar">
+      <div class="hp-fill" style="width:${hpPct}%"></div>
+      ${shieldBar}
+    </div>
+    <div class="hp-text">${format(Math.max(0,unit.hp))}/${format(unit.maxHp)}${unit.shield ? ' 🛡️'+format(unit.shield) : ''}</div>
+  `;
+  return div;
+}
+
+function showDamage(defender, dmg, crit) {
+  const id = defender.id || defender.def?.id;
+  const el = document.getElementById('unit-' + id);
+  if (!el) return;
+  
+  const dmgEl = document.createElement('div');
+  dmgEl.className = 'damage-num';
+  dmgEl.textContent = '-' + format(dmg);
+  dmgEl.style.color = crit ? '#ff0' : (defender.isHero ? '#f66' : '#ff8');
+  if (crit) dmgEl.textContent = '✦ ' + dmgEl.textContent;
+  
+  const rect = el.getBoundingClientRect();
+  dmgEl.style.left = (rect.left + rect.width / 2 - 20) + 'px';
+  dmgEl.style.top = (rect.top + 10) + 'px';
+  dmgEl.style.position = 'fixed';
+  document.body.appendChild(dmgEl);
+  setTimeout(() => dmgEl.remove(), 800);
+}
+
+function animateAttack(attacker, defender) {
+  const aId = attacker.id || attacker.def?.id;
+  const dId = defender.id || defender.def?.id;
+  const aEl = document.getElementById('unit-' + aId);
+  const dEl = document.getElementById('unit-' + dId);
+  if (aEl) {
+    aEl.classList.add('attacking');
+    setTimeout(() => aEl.classList.remove('attacking'), 300);
+  }
+  if (dEl) {
+    dEl.classList.add('hit');
+    setTimeout(() => dEl.classList.remove('hit'), 300);
+  }
+}
+
+function renderSquad() {
+  const list = document.getElementById('squadList');
+  list.innerHTML = '';
+  
+  const slotIcons = { weapon: '🔫', armor: '🛡️', module: '💾' };
+  const slotLabels = { weapon: 'WPN', armor: 'ARM', module: 'MOD' };
+  
+  // Auto-equip button at the top
+  const totalGearAvailable = state.inventory.length;
+  const autoBar = document.createElement('div');
+  autoBar.className = 'auto-equip-bar';
+  autoBar.innerHTML = `
+    <div class="auto-equip-info">
+      ${totalGearAvailable} items in inventory • Top-priority hero gets best gear first
+    </div>
+    <button class="auto-equip-btn" id="autoEquipBtn">✦ EQUIP BEST</button>
+  `;
+  list.appendChild(autoBar);
+  attachTap(autoBar.querySelector('#autoEquipBtn'), () => {
+    showModal('AUTO-EQUIP BEST GEAR',
+      'This will redistribute all your equipment (inventory + currently equipped) to your squad. Heroes higher in the list get top picks first.',
+      () => autoEquipBest());
+  });
+  
+  HERO_CLASSES.forEach(def => {
+    const save = state.heroes[def.id];
+    const div = document.createElement('div');
+    div.className = 'hero-card' + (save.unlocked ? '' : ' locked');
+    
+    if (save.unlocked) {
+      const stats = getHeroStats(def.id);
+      const cost = getHeroLevelCost(def.id);
+      const canAfford = state.credits >= cost;
+      
+      // Build equipment display
+      let equipHtml = '<div class="hero-equipment">';
+      ['weapon', 'armor', 'module'].forEach(slot => {
+        const item = save.equipment[slot];
+        if (item) {
+          const rarityName = RARITY_NAMES[item.rarity];
+          const upgLevel = item.upgrades || 0;
+          const upgPlus = upgLevel > 0 ? ` <span style="color:#0f0">+${upgLevel}</span>` : '';
+          const upgCost = getUpgradeCost(item);
+          const maxedUpg = upgLevel >= MAX_UPGRADES;
+          const canUpgrade = !maxedUpg && state.scrap >= upgCost;
+          
+          const upgBtnLabel = maxedUpg ? 'MAX' : `⚙ ${format(upgCost)}`;
+          
+          equipHtml += `<div class="equip-slot rarity-${rarityName}">
+            <span class="equip-slot-icon">${slotIcons[slot]}</span>
+            <span class="equip-slot-name">${item.displayName}${upgPlus}</span>
+            <button class="slot-action upg-action" data-act="upg-equipped" data-hero="${def.id}" data-slot="${slot}" ${canUpgrade ? '' : 'disabled'}>${upgBtnLabel}</button>
+            <button class="slot-action unequip-action" data-act="unequip" data-hero="${def.id}" data-slot="${slot}">✕</button>
+          </div>`;
+        } else {
+          equipHtml += `<div class="equip-slot empty">
+            <span class="equip-slot-icon">${slotIcons[slot]}</span>
+            <span class="equip-slot-name">— ${slotLabels[slot]} empty —</span>
+          </div>`;
+        }
+      });
+      equipHtml += '</div>';
+      
+      div.innerHTML = `
+        <div class="hero-header">
+          <div class="hero-portrait">${def.icon}</div>
+          <div class="hero-info">
+            <div class="name">${def.name}</div>
+            <div class="class">Lv.${save.level} • ${def.class}</div>
+            <div class="stats">
+              HP: ${format(stats.maxHp)} • ATK: ${format(stats.atk)} • SPD: ${stats.spd.toFixed(2)}
+            </div>
+          </div>
+          <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
+            LV+<br>${format(cost)} CR
+          </button>
+        </div>
+        ${equipHtml}
+      `;
+      
+      const btn = div.querySelector('.level-btn');
+      attachTap(btn, () => levelUpHero(def.id));
+      
+      // Wire up the per-slot action buttons
+      div.querySelectorAll('.slot-action').forEach(actionBtn => {
+        attachTap(actionBtn, (e) => {
+          e.stopPropagation && e.stopPropagation();
+          const act = actionBtn.dataset.act;
+          const heroId = actionBtn.dataset.hero;
+          const slot = actionBtn.dataset.slot;
+          if (act === 'unequip') {
+            unequipItem(heroId, slot);
+          } else if (act === 'upg-equipped') {
+            if (actionBtn.disabled) return;
+            upgradeEquippedItem(heroId, slot);
+          }
+        });
+      });
+    } else {
+      const unlockCost = getHeroUnlockCost(def.id);
+      const canAfford = state.credits >= unlockCost;
+      div.innerHTML = `
+        <div class="hero-header">
+          <div class="hero-portrait">${def.icon}</div>
+          <div class="hero-info">
+            <div class="name">${def.name}</div>
+            <div class="class">🔒 ${def.class}</div>
+            <div class="stats">${def.desc}</div>
+          </div>
+          <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
+            HIRE<br>${format(unlockCost)} CR
+          </button>
+        </div>
+      `;
+      const btn = div.querySelector('.level-btn');
+      attachTap(btn, () => unlockHero(def.id));
+    }
+    
+    list.appendChild(div);
+  });
+}
+
+function unequipItem(heroId, slot) {
+  const hero = state.heroes[heroId];
+  const item = hero.equipment[slot];
+  if (!item) return;
+  state.inventory.push(item);
+  hero.equipment[slot] = null;
+  setupCombat();
+  refreshAffordability();
+  log(`Unequipped ${item.displayName}`, 'loot');
+}
+
+function getSellValue(item) {
+  // Higher rarity = more credits, scales with floor it dropped from
+  const baseCredit = 5 * Math.pow(2, item.rarity);
+  const floorBonus = Math.pow(1.10, item.floor || 1);
+  const upgBonus = 1 + (item.upgrades || 0) * 0.5;
+  const sellMult = 1 + getSkillBonus('sell_pct'); // Auction Network skill
+  const credits = Math.floor(baseCredit * floorBonus * upgBonus * sellMult);
+  // Scrap return = always at least 1, more for higher rarity/floor
+  const scrap = Math.max(1, Math.floor((item.rarity + 1) * Math.pow(1.05, item.floor || 1) * upgBonus * sellMult));
+  return { credits, scrap };
+}
+
+function getUpgradeCost(item) {
+  const lvl = item.upgrades || 0;
+  // Higher rarity items cost more scrap to upgrade, cost grows per upgrade
+  const base = 5 * Math.pow(2, item.rarity);
+  const reduction = Math.min(0.75, getSkillBonus('upg_cost_reduce')); // Forge Mastery skill
+  const scrap = Math.floor(base * Math.pow(1.6, lvl) * (1 - reduction));
+  return Math.max(1, scrap);
+}
+
+const MAX_UPGRADES = 10;
+
+function sellItem(itemId) {
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  const value = getSellValue(item);
+  state.credits += value.credits;
+  state.scrap += value.scrap;
+  state.stats.lifetimeCredits += value.credits;
+  state.stats.lifetimeScrap += value.scrap;
+  state.stats.itemsSold++;
+  state.inventory = state.inventory.filter(i => i.id !== itemId);
+  log(`💰 Sold ${item.displayName} (+${value.credits} CR, +${value.scrap} ⚙)`, 'loot');
+  refreshAffordability();
+}
+
+function upgradeItem(itemId) {
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  if ((item.upgrades || 0) >= MAX_UPGRADES) return;
+  const cost = getUpgradeCost(item);
+  if (state.scrap < cost) return;
+  state.scrap -= cost;
+  item.upgrades = (item.upgrades || 0) + 1;
+  state.stats.itemsUpgraded++;
+  log(`⚙ Upgraded ${item.displayName} to +${item.upgrades}`, 'loot');
+  refreshAffordability();
+}
+
+function upgradeEquippedItem(heroId, slot) {
+  const hero = state.heroes[heroId];
+  if (!hero) return;
+  const item = hero.equipment[slot];
+  if (!item) return;
+  if ((item.upgrades || 0) >= MAX_UPGRADES) return;
+  const cost = getUpgradeCost(item);
+  if (state.scrap < cost) return;
+  state.scrap -= cost;
+  item.upgrades = (item.upgrades || 0) + 1;
+  state.stats.itemsUpgraded++;
+  log(`⚙ Upgraded ${item.displayName} to +${item.upgrades}`, 'loot');
+  setupCombat(); // refresh stats so new bonus applies in combat immediately
+  refreshAffordability();
+}
+
+function sellAllBelow(rarityThreshold) {
+  const toSell = state.inventory.filter(i => i.rarity < rarityThreshold);
+  if (toSell.length === 0) return;
+  let totalCred = 0, totalScrap = 0;
+  toSell.forEach(item => {
+    const v = getSellValue(item);
+    totalCred += v.credits;
+    totalScrap += v.scrap;
+  });
+  state.credits += totalCred;
+  state.scrap += totalScrap;
+  state.stats.lifetimeCredits += totalCred;
+  state.stats.lifetimeScrap += totalScrap;
+  state.stats.itemsSold += toSell.length;
+  state.inventory = state.inventory.filter(i => i.rarity >= rarityThreshold);
+  log(`💰 Sold ${toSell.length} items (+${totalCred} CR, +${totalScrap} ⚙)`, 'loot');
+  refreshAffordability();
+}
+
+function renderLoot() {
+  const list = document.getElementById('lootList');
+  list.innerHTML = '';
+  
+  // Quick-sell buttons at top
+  const quickSell = document.createElement('div');
+  quickSell.className = 'quick-sell';
+  quickSell.innerHTML = `
+    <button class="qs-btn qs-common" data-r="1">Sell Commons</button>
+    <button class="qs-btn qs-uncommon" data-r="2">Sell ≤ Uncommon</button>
+    <button class="qs-btn qs-rare" data-r="3">Sell ≤ Rare</button>
+    <button class="qs-btn qs-all" data-r="all">Sell All</button>
+  `;
+  list.appendChild(quickSell);
+  quickSell.querySelectorAll('.qs-btn').forEach(btn => {
+    attachTap(btn, () => {
+      if (btn.dataset.r === 'all') {
+        const count = state.inventory.length;
+        if (count === 0) {
+          showStatus('Nothing to sell', 'error');
+          return;
+        }
+        showModal(`Sell ALL ${count} item(s)?`,
+          `This will sell <b>everything</b> in your inventory, including legendaries. Equipped items are safe.`,
+          () => sellAllBelow(99)); // rarity 99 = above all rarities, sells everything
+      } else {
+        const r = parseInt(btn.dataset.r);
+        const count = state.inventory.filter(i => i.rarity < r).length;
+        if (count === 0) {
+          showStatus('Nothing to sell', 'error');
+          return;
+        }
+        showModal(`Sell ${count} item(s)?`,
+          `This will sell all items below ${RARITY_NAMES[r].toUpperCase()} rarity. Equipped items are safe.`,
+          () => sellAllBelow(r));
+      }
+    });
+  });
+  
+  if (state.inventory.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.style.cssText = 'text-align:center;padding:20px;color:#066;font-size:0.85em;';
+    emptyDiv.textContent = 'No items. Defeat enemies to find loot.';
+    list.appendChild(emptyDiv);
+    return;
+  }
+  
+  // Sort by rarity descending, then by upgrade level
+  const sorted = [...state.inventory].sort((a, b) => {
+    if (b.rarity !== a.rarity) return b.rarity - a.rarity;
+    return (b.upgrades || 0) - (a.upgrades || 0);
+  });
+  
+  const slotIcons = { weapon: '🔫', armor: '🛡️', module: '💾' };
+  
+  sorted.forEach(item => {
+    const rarityName = RARITY_NAMES[item.rarity];
+    const mult = RARITY_MULTS[item.rarity];
+    const upgMult = 1 + (item.upgrades || 0) * 0.20;
+    const div = document.createElement('div');
+    div.className = `loot-item rarity-${rarityName}`;
+    
+    const stats = [];
+    if (item.atk) stats.push(`+${Math.floor(item.atk * mult * upgMult)} ATK`);
+    if (item.hp) stats.push(`+${Math.floor(item.hp * mult * upgMult)} HP`);
+    if (item.speed) stats.push(`+${(item.speed * mult * upgMult).toFixed(2)} SPD`);
+    
+    const upgLevel = item.upgrades || 0;
+    const upgPlus = upgLevel > 0 ? ` <span style="color:#0f0">+${upgLevel}</span>` : '';
+    const sellValue = getSellValue(item);
+    const upgCost = getUpgradeCost(item);
+    const canUpgrade = upgLevel < MAX_UPGRADES && state.scrap >= upgCost;
+    const maxedUpg = upgLevel >= MAX_UPGRADES;
+    
+    div.innerHTML = `
+      <div class="loot-info">
+        <div class="name">${slotIcons[item.slot]} ${item.displayName}${upgPlus}</div>
+        <div class="stats">${rarityName.toUpperCase()} • ${stats.join(' • ')}</div>
+        <div class="loot-meta">Floor ${item.floor || '?'} • Upgrade: ${upgLevel}/${MAX_UPGRADES}</div>
+      </div>
+      <div class="loot-actions">
+        <button class="loot-btn equip" data-act="equip" data-item="${item.id}">⚔ EQUIP</button>
+        <button class="loot-btn upgrade" data-act="upgrade" data-item="${item.id}" ${canUpgrade ? '' : 'disabled'}>
+          ${maxedUpg ? 'MAX' : '⚙ UPG ' + format(upgCost)}
+        </button>
+        <button class="loot-btn sell" data-act="sell" data-item="${item.id}">
+          💰 ${format(sellValue.credits)}
+        </button>
+      </div>
+    `;
+    
+    div.querySelectorAll('.loot-btn').forEach(btn => {
+      const act = btn.dataset.act;
+      const id = parseInt(btn.dataset.item);
+      attachTap(btn, () => {
+        if (act === 'equip') showEquipDialog(id);
+        else if (act === 'upgrade') upgradeItem(id);
+        else if (act === 'sell') {
+          const it = state.inventory.find(i => i.id === id);
+          if (!it) return;
+          const v = getSellValue(it);
+          showModal(`Sell ${it.displayName}?`,
+            `You will receive <b>${v.credits} CR</b> and <b>${v.scrap} ⚙ scrap</b>.`,
+            () => sellItem(id));
+        }
+      });
+    });
+    
+    list.appendChild(div);
+  });
+}
+
+function showEquipDialog(itemId) {
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  
+  const unlockedHeroes = HERO_CLASSES.filter(h => state.heroes[h.id].unlocked);
+  
+  // Build heroes modal
+  let content = `<p>Equip to which squad member?</p>`;
+  content += '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">';
+  unlockedHeroes.forEach(h => {
+    const equipped = state.heroes[h.id].equipment[item.slot];
+    const equippedText = equipped ? ` (has ${equipped.displayName})` : '';
+    content += `<button class="modal-btn" data-heroid="${h.id}" style="flex:0;">${h.icon} ${h.name}${equippedText}</button>`;
+  });
+  content += '</div>';
+  
+  document.getElementById('modalTitle').textContent = 'EQUIP ' + item.displayName;
+  document.getElementById('modalText').innerHTML = content;
+  document.getElementById('modalTextarea').style.display = 'none';
+  document.getElementById('modal').classList.add('show');
+  
+  // Hide default buttons, we use inline ones
+  document.querySelector('.modal-buttons').style.display = 'none';
+  
+  // Wire up hero selection
+  document.querySelectorAll('[data-heroid]').forEach(btn => {
+    attachTap(btn, () => {
+      equipItem(itemId, btn.dataset.heroid);
+      document.getElementById('modal').classList.remove('show');
+      document.querySelector('.modal-buttons').style.display = 'flex';
+    });
+  });
+}
+
+function formatPlaytime(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  if (days > 0) return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m ${secs}s`;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+}
+
+function renderStats() {
+  ensureStats();
+  const s = state.stats;
+  const list = document.getElementById('statsList');
+  if (!list) return;
+  
+  const accuracyPct = s.damageDealt > 0
+    ? ((s.crits / Math.max(1, s.enemiesKilled + s.bossesKilled)) || 0)
+    : 0;
+  const critRate = (s.damageDealt + s.damageTaken) > 0 && s.crits > 0
+    ? `${s.crits} total`
+    : `${s.crits}`;
+  
+  // Build top enemy kills (top 5)
+  const enemyEntries = Object.entries(s.enemyKillsByType).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  let enemyBreakdown = '';
+  if (enemyEntries.length > 0) {
+    enemyBreakdown = enemyEntries.map(([n, c]) => 
+      `<div class="stat-row sub"><span class="stat-label">${n}</span><span class="stat-value">${format(c)}</span></div>`
+    ).join('');
+  } else {
+    enemyBreakdown = '<div class="stat-row sub"><span class="stat-label" style="opacity:0.5">No kills yet</span></div>';
+  }
+  
+  // Boss kills
+  let bossBreakdown = '';
+  const bossEntries = Object.entries(s.bossKillsByName);
+  if (bossEntries.length > 0) {
+    bossBreakdown = bossEntries.map(([n, c]) => 
+      `<div class="stat-row sub"><span class="stat-label">${n}</span><span class="stat-value">${c}×</span></div>`
+    ).join('');
+  } else {
+    bossBreakdown = '<div class="stat-row sub"><span class="stat-label" style="opacity:0.5">No bosses defeated yet</span></div>';
+  }
+  
+  // Rarity breakdown
+  const rc = s.rarityCounts;
+  let rarityBreakdown = '';
+  RARITY_NAMES.forEach(rn => {
+    const count = rc[rn] || 0;
+    const colorMap = { common: '#ccc', uncommon: '#0f0', rare: '#08f', epic: '#c0f', legendary: '#fa0' };
+    rarityBreakdown += `<div class="stat-row sub"><span class="stat-label" style="color:${colorMap[rn]}">${rn.toUpperCase()}</span><span class="stat-value">${format(count)}</span></div>`;
+  });
+  
+  list.innerHTML = `
+    <div class="stat-group">
+      <div class="stat-group-title">⏱ TIME & PROGRESS</div>
+      <div class="stat-row"><span class="stat-label">Playtime</span><span class="stat-value">${formatPlaytime(s.playtimeMs)}</span></div>
+      <div class="stat-row"><span class="stat-label">Highest floor reached</span><span class="stat-value">${state.maxFloor}</span></div>
+      <div class="stat-row"><span class="stat-label">Floors cleared</span><span class="stat-value">${format(s.floorsCleared)}</span></div>
+      <div class="stat-row"><span class="stat-label">Current chapter</span><span class="stat-value">${state.chapter}</span></div>
+    </div>
+    
+    <div class="stat-group">
+      <div class="stat-group-title">⚔ COMBAT</div>
+      <div class="stat-row"><span class="stat-label">Enemies killed</span><span class="stat-value">${format(s.enemiesKilled)}</span></div>
+      <div class="stat-row"><span class="stat-label">Bosses defeated</span><span class="stat-value">${format(s.bossesKilled)} / ${format(s.bossesEncountered)}</span></div>
+      <div class="stat-row"><span class="stat-label">Damage dealt</span><span class="stat-value">${format(s.damageDealt)}</span></div>
+      <div class="stat-row"><span class="stat-label">Damage taken</span><span class="stat-value">${format(s.damageTaken)}</span></div>
+      <div class="stat-row"><span class="stat-label">Biggest single hit</span><span class="stat-value" style="color:#ff0">${format(s.biggestHit)}</span></div>
+      <div class="stat-row"><span class="stat-label">Critical strikes</span><span class="stat-value">${critRate}</span></div>
+      <div class="stat-row"><span class="stat-label">Hero deaths</span><span class="stat-value" style="color:#f88">${format(s.heroDeaths)}</span></div>
+    </div>
+    
+    <div class="stat-group">
+      <div class="stat-group-title">💰 ECONOMY</div>
+      <div class="stat-row"><span class="stat-label">Lifetime credits</span><span class="stat-value">${format(s.lifetimeCredits)} CR</span></div>
+      <div class="stat-row"><span class="stat-label">Lifetime scrap</span><span class="stat-value">${format(s.lifetimeScrap)} ⚙</span></div>
+      <div class="stat-row"><span class="stat-label">Items found</span><span class="stat-value">${format(s.itemsFound)}</span></div>
+      <div class="stat-row"><span class="stat-label">Items sold</span><span class="stat-value">${format(s.itemsSold)}</span></div>
+      <div class="stat-row"><span class="stat-label">Items upgraded</span><span class="stat-value">${format(s.itemsUpgraded)}</span></div>
+    </div>
+    
+    <div class="stat-group">
+      <div class="stat-group-title">🎁 LOOT BY RARITY</div>
+      ${rarityBreakdown}
+    </div>
+    
+    <div class="stat-group">
+      <div class="stat-group-title">👹 TOP ENEMY KILLS</div>
+      ${enemyBreakdown}
+    </div>
+    
+    <div class="stat-group">
+      <div class="stat-group-title">💀 BOSSES SLAIN</div>
+      ${bossBreakdown}
+    </div>
+  `;
+}
+
+function buySkill(skillId) {
+  ensureStats();
+  const skill = SKILL_TREE.find(s => s.id === skillId);
+  if (!skill) return;
+  const currentLevel = getSkillLevel(skillId);
+  if (currentLevel >= skill.maxLevel) return;
+  const cost = skill.costs[currentLevel];
+  if (state.prestige.shards < cost) return;
+  state.prestige.shards -= cost;
+  state.prestige.skills[skillId] = currentLevel + 1;
+  log(`💠 Acquired: ${skill.name} (Lvl ${currentLevel + 1})`, 'chapter');
+  setupCombat(); // refresh stat-affecting bonuses immediately
+  renderPrestige();
+  refreshAffordability();
+}
+
+function performPrestige() {
+  ensureStats();
+  const reward = calculateShardReward(state.maxFloor);
+  if (reward <= 0) return;
+  
+  // Award shards
+  state.prestige.shards += reward;
+  state.prestige.totalShardsEarned += reward;
+  state.prestige.runs++;
+  
+  // Reset progress: floor, credits, scrap, inventory all gone
+  state.credits = 0;
+  state.scrap = 0;
+  state.floor = 1;
+  state.maxFloor = 1;
+  state.chapter = 1;
+  state.inventory = [];
+  state.storyUnlocked = [1];
+  
+  // Heroes: keep all unlocked, halve their levels (rounded up, min 1)
+  Object.keys(state.heroes).forEach(hid => {
+    const h = state.heroes[hid];
+    h.level = Math.max(1, Math.ceil(h.level / 2));
+    // Equipment is wiped (it was in inventory or equipped, both reset)
+    h.equipment = { weapon: null, armor: null, module: null };
+  });
+  
+  // Reset combat log for fresh feel
+  combat.logLines = [];
+  
+  log('💠 VOID JUMP COMPLETE — Reality reshapes...', 'chapter');
+  log(`Earned ${reward} 💠 Void Shards (Run #${state.prestige.runs})`, 'chapter');
+  
+  setupCombat();
+  updateChapter();
+  renderAll();
+  saveGame(true);
+}
+
+function renderPrestige() {
+  ensureStats();
+  const el = document.getElementById('prestigeContent');
+  if (!el) return;
+  
+  const shards = state.prestige.shards;
+  const totalEarned = state.prestige.totalShardsEarned;
+  const runs = state.prestige.runs;
+  const reward = calculateShardReward(state.maxFloor);
+  const canPrestige = state.maxFloor >= PRESTIGE_MIN_FLOOR;
+  
+  // Build summary card
+  let html = `
+    <div class="prestige-summary">
+      <div class="prestige-shards">${shards} 💠</div>
+      <div class="prestige-meta">
+        Lifetime earned: ${totalEarned} 💠 • Void Jumps completed: ${runs}<br>
+        Highest floor reached: <b>${state.maxFloor}</b>
+      </div>
+    </div>
+  `;
+  
+  // Build prestige action card
+  if (canPrestige) {
+    html += `
+      <div class="prestige-action ready">
+        <div class="prestige-reward-info">
+          Jumping now would yield<br>
+          <span class="big">${reward} 💠 Void Shards</span>
+        </div>
+        <div class="prestige-warn">
+          ⚠ Resets floor to 1, clears credits/scrap/inventory.<br>
+          Heroes drop to half level. Skills & shards are kept.
+        </div>
+        <button class="prestige-btn" id="doPrestigeBtn">▸ JUMP TO THE VOID ◂</button>
+      </div>
+    `;
+  } else {
+    const remaining = PRESTIGE_MIN_FLOOR - state.maxFloor;
+    html += `
+      <div class="prestige-action">
+        <div class="prestige-reward-info">
+          Reach floor <b>${PRESTIGE_MIN_FLOOR}</b> to unlock the Void Protocol.<br>
+          (${remaining} floor${remaining === 1 ? '' : 's'} to go)
+        </div>
+        <button class="prestige-btn" disabled>▸ LOCKED ◂</button>
+      </div>
+    `;
+  }
+  
+  // Build skill tree by branch
+  Object.keys(SKILL_BRANCHES).forEach(branchKey => {
+    const branch = SKILL_BRANCHES[branchKey];
+    html += `<div class="skill-branch">
+      <div class="skill-branch-title" style="color:${branch.color}">${branch.name}</div>`;
+    
+    SKILL_TREE.filter(s => s.branch === branchKey).forEach(skill => {
+      const lvl = getSkillLevel(skill.id);
+      const maxed = lvl >= skill.maxLevel;
+      const cost = maxed ? 0 : skill.costs[lvl];
+      const affordable = !maxed && shards >= cost;
+      
+      let cls = 'skill-node';
+      if (maxed) cls += ' maxed';
+      else if (affordable) cls += ' affordable';
+      else cls += ' unaffordable';
+      
+      const costText = maxed ? 'MAX' : `${cost} 💠`;
+      
+      html += `
+        <div class="${cls}" data-skill="${skill.id}">
+          <div class="skill-info">
+            <div class="skill-name">${skill.name}</div>
+            <div class="skill-desc">${skill.desc}</div>
+            <div class="skill-progress">Level ${lvl} / ${skill.maxLevel}</div>
+          </div>
+          <div class="skill-cost">${costText}</div>
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+  });
+  
+  el.innerHTML = html;
+  
+  // Wire up buttons
+  if (canPrestige) {
+    attachTap(document.getElementById('doPrestigeBtn'), () => {
+      showModal('▸ JUMP TO THE VOID ◂',
+        `Sacrifice this run for <b>${reward} 💠 Void Shards</b>?<br><br>` +
+        `Floor, credits, scrap, and inventory will be lost.<br>` +
+        `Heroes drop to half their current level (still unlocked).<br>` +
+        `Skills, shards, and stats are kept forever.`,
+        () => performPrestige());
+    });
+  }
+  
+  el.querySelectorAll('.skill-node').forEach(node => {
+    attachTap(node, () => {
+      const skillId = node.dataset.skill;
+      const skill = SKILL_TREE.find(s => s.id === skillId);
+      const lvl = getSkillLevel(skillId);
+      if (lvl >= skill.maxLevel) return;
+      const cost = skill.costs[lvl];
+      if (state.prestige.shards < cost) return;
+      buySkill(skillId);
+    });
+  });
+}
+
+function renderStory() {
+  const list = document.getElementById('storyList');
+  list.innerHTML = '';
+  state.storyUnlocked.forEach(chNum => {
+    const ch = CHAPTERS[chNum - 1];
+    if (!ch) return;
+    const div = document.createElement('div');
+    div.className = 'story-entry';
+    div.innerHTML = `
+      <div class="story-chapter-title">${ch.name}</div>
+      <div class="story-body">${ch.story}</div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ============ INPUT HANDLING ============
+
+function attachTap(element, handler) {
+  let handled = false;
+  if (window.PointerEvent) {
+    element.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handler(e);
+    });
+  } else {
+    element.addEventListener('touchstart', (e) => {
+      handled = true;
+      e.preventDefault();
+      handler(e);
+    }, { passive: false });
+    element.addEventListener('click', (e) => {
+      if (handled) { handled = false; return; }
+      handler(e);
+    });
+  }
+}
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  attachTap(tab, () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    
+    // Re-render the panel that just became visible so it shows current state.
+    // (Hidden tabs may have skipped renders for performance.)
+    const t = tab.dataset.tab;
+    if (t === 'squad') renderSquad();
+    else if (t === 'loot') renderLoot();
+    else if (t === 'prestige') renderPrestige();
+    else if (t === 'stats') renderStats();
+    else if (t === 'story') renderStory();
+  });
+});
+
+// ============ MODAL ============
+
+const modal = document.getElementById('modal');
+const modalTextarea = document.getElementById('modalTextarea');
+let modalCallback = null;
+
+function showModal(title, text, onConfirm, textareaContent) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').innerHTML = text;
+  document.querySelector('.modal-buttons').style.display = 'flex';
+  if (textareaContent !== undefined) {
+    modalTextarea.style.display = 'block';
+    modalTextarea.value = textareaContent;
+  } else {
+    modalTextarea.style.display = 'none';
+  }
+  modalCallback = onConfirm;
+  modal.classList.add('show');
+}
+
+attachTap(document.getElementById('modalConfirm'), () => {
+  const v = modalTextarea.value;
+  modal.classList.remove('show');
+  if (modalCallback) modalCallback(v);
+});
+attachTap(document.getElementById('modalCancel'), () => {
+  modal.classList.remove('show');
+});
+
+// ============ SAVE / LOAD ============
+
+const SAVE_KEY = 'voidBreachSave';
+
+function showStatus(msg, type) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  el.style.color = type === 'success' ? '#0f0' : type === 'error' ? '#f88' : '#066';
+  if (type) {
+    setTimeout(() => {
+      el.textContent = 'Auto-save: every 15s';
+      el.style.color = '#066';
+    }, 2500);
+  }
+}
+
+function saveGame(silent) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ state, timestamp: Date.now() }));
+    if (!silent) showStatus('✓ SAVED', 'success');
+    return true;
+  } catch (e) {
+    if (!silent) showStatus('✗ Storage unavailable', 'error');
+    return false;
+  }
+}
+
+function loadGame(silent) {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) {
+      if (!silent) showStatus('No save found', 'error');
+      return false;
+    }
+    const data = JSON.parse(raw);
+    if (!data.state) {
+      if (!silent) showStatus('✗ Corrupt save', 'error');
+      return false;
+    }
+    
+    // Merge with defaults to handle updates
+    state = Object.assign({
+      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1,
+      heroes: {
+        marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
+        engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+        medic: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+        psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
+      },
+      inventory: [], storyUnlocked: [1], nextItemId: 1,
+      prestige: { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} }
+    }, data.state);
+    
+    // Offline progress — award some credits based on time away
+    const elapsedSec = Math.min(8*3600, (Date.now() - data.timestamp) / 1000);
+    if (elapsedSec > 60) {
+      const floorRate = Math.floor(5 * Math.pow(1.15, state.floor)); // est credits/sec
+      const offlineGain = Math.floor(floorRate * elapsedSec * 0.3);
+      if (offlineGain > 0) {
+        state.credits += offlineGain;
+        const hours = Math.floor(elapsedSec / 3600);
+        const mins = Math.floor((elapsedSec % 3600) / 60);
+        const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        setTimeout(() => {
+          showModal('🌙 OFFLINE OPERATIONS', 
+            `Your squad continued salvage ops for <b>${timeStr}</b>.<br><br>Recovered: <b>${format(offlineGain)} credits</b>`, 
+            () => {});
+        }, 300);
+      }
+    }
+    
+    // Reset playtime tracker so we don't double-count loading time
+    _lastPlaytimeUpdate = Date.now();
+    ensureStats();
+    
+    setupCombat();
+    renderAll();
+    if (!silent) showStatus('✓ LOADED', 'success');
+    return true;
+  } catch (e) {
+    if (!silent) showStatus('✗ Load error', 'error');
+    return false;
+  }
+}
+
+function exportSave() {
+  const str = JSON.stringify({ state, timestamp: Date.now() });
+  const encoded = btoa(unescape(encodeURIComponent(str)));
+  showModal('EXPORT SAVE', 
+    'Copy this code. Paste it in Import on any device to restore.',
+    () => {}, encoded);
+  setTimeout(() => {
+    modalTextarea.focus();
+    modalTextarea.select();
+  }, 100);
+}
+
+function importSave() {
+  showModal('IMPORT SAVE',
+    'Paste your save code. <b>This overwrites current progress.</b>',
+    (val) => {
+      if (!val || !val.trim()) { showStatus('Empty code', 'error'); return; }
+      try {
+        const decoded = decodeURIComponent(escape(atob(val.trim())));
+        const data = JSON.parse(decoded);
+        if (!data.state) throw new Error();
+        state = data.state;
+        ensureStats();
+        _lastPlaytimeUpdate = Date.now();
+        saveGame(true);
+        setupCombat();
+        renderAll();
+        showStatus('✓ IMPORTED', 'success');
+      } catch (e) {
+        showStatus('✗ Invalid code', 'error');
+      }
+    }, '');
+  setTimeout(() => modalTextarea.focus(), 100);
+}
+
+attachTap(document.getElementById('saveBtn'), () => saveGame(false));
+attachTap(document.getElementById('loadBtn'), () => loadGame(false));
+attachTap(document.getElementById('exportBtn'), () => exportSave());
+attachTap(document.getElementById('importBtn'), () => importSave());
+attachTap(document.getElementById('reloadBtn'), () => {
+  showModal('🔄 FORCE RELOAD',
+    'This will save your game and reload the page, bypassing your browser cache to fetch the latest version. Useful after a game update.',
+    () => {
+      saveGame(true);
+      // Cache-busting reload: appends a unique query string and forces re-fetch
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', Date.now().toString());
+      window.location.replace(url.toString());
+    });
+});
+
+// Display version in SYS panel
+document.getElementById('versionNum').textContent = 'v' + GAME_VERSION;
+
+attachTap(document.getElementById('resetBtn'), () => {
+  showModal('⚠ RESET ALL DATA', 
+    'Erase all progress including heroes, loot, stats, and story. This cannot be undone.',
+    () => {
+      state = {
+        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1,
+        heroes: {
+          marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
+          engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+          medic: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+          psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
+        },
+        inventory: [], storyUnlocked: [1], nextItemId: 1,
+        prestige: { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} }
+      };
+      ensureStats();
+      _lastPlaytimeUpdate = Date.now();
+      combat.logLines = [];
+      setupCombat();
+      renderAll();
+    });
+});
+
+setInterval(() => saveGame(true), 15000);
+window.addEventListener('beforeunload', () => saveGame(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(true); });
+
+// ============ INIT ============
+
+function renderAll() {
+  renderStatus();
+  renderChapter();
+  renderSquad();
+  renderLoot();
+  renderStats();
+  renderPrestige();
+  renderStory();
+  renderUnits();
+}
+
+// Try load, else start fresh
+if (!loadGame(true)) {
+  ensureStats();
+  setupCombat();
+  updateChapter();
+  log('◆ System online', 'chapter');
+  log('◆ Entering sector Omega-9', 'chapter');
+}
+renderAll();
+
+// Main game loop
+setInterval(combatTick, TICK_MS);
+
+// Playtime + stats refresh: tick every second, only update display if stats tab is open
+let _lastPlaytimeUpdate = Date.now();
+setInterval(() => {
+  ensureStats();
+  const now = Date.now();
+  state.stats.playtimeMs += (now - _lastPlaytimeUpdate);
+  _lastPlaytimeUpdate = now;
+  // Only re-render stats panel if it's currently visible (saves DOM work)
+  const statsPanel = document.getElementById('tab-stats');
+  if (statsPanel && statsPanel.classList.contains('active')) {
+    renderStats();
+  }
+}, 1000);
+</script>
+</body>
+</html>
