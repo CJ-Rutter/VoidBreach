@@ -8,9 +8,11 @@
 
 ## 🎮 Play
 
-Drop `index.html` into your browser, or play the live build (if GitHub Pages is enabled): **[link to your GitHub Pages URL once deployed]**
+**Play now: https://cj-rutter.github.io/VoidBreach/**
 
-The game is mobile-first — works great on a phone in portrait mode. Open the link on your phone and add it to your home screen for an app-like experience.
+Drop `index.html` into a browser, or open the link above on your phone and install it from the share menu (iOS) or browser menu (Android) for a fullscreen, app-like experience.
+
+The game is mobile-first — works great on a phone in portrait mode.
 
 ---
 
