@@ -11,9 +11,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and thi
 Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the full roadmap.
 
 ### Likely next
-- Power skill branch (boss damage, 5th hero)
+- Squad-selection UI (pick 4 of N unlocked heroes) — prerequisite for expanding the roster past 4
+- 3 new heroes (Sniper / Tank / Summoner)
+- Power skill branch (boss damage, 5th hero unlock)
 - Combat speed control (1× / 2× / 4×)
 - Sound effects
+
+---
+
+## [0.3.00] — Hero Abilities
+
+### Added
+- **Hero abilities** — each of the 4 heroes gains 3 level-gated abilities (unlocked at Lv5/10/25), surfaced on the squad cards as you level up. No save migration needed; abilities are pure level-derived.
+  - 🪖 **Marine** — *Bulwark* (-10% damage taken), *Counter-Strike* (25% retaliate on hit, ½ damage), *Squad Discipline* (+5% squad attack aura while alive)
+  - 🔧 **Engineer** — *Frag Grenade* (every 5th attack hits all enemies for 75%), *Overcharge* (+1% atk per 1% missing HP), *Siege Mode* (+50% damage to bosses)
+  - 💊 **Medic** — *Triage* (heal doubles on allies below 30% HP), *Stim Surge* (squad +10% HP on floor clear), *Resurrection Protocol* (once-per-battle 1 HP save; stacks with Last Stand)
+  - 🔮 **Psion** — *Mind Spike* (crits do 3× instead of 2×), *Synaptic Echo* (15% chance to attack twice), *Void Resonance* (each crit cuts squad cooldowns by 0.15s)
 
 ---
 

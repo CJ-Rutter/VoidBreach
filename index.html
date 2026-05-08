@@ -501,12 +501,85 @@
   .equip-slot-icon {
     font-size: 1.1em;
   }
-  
+
   .equip-slot-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
+  }
+
+  /* Hero abilities (level-gated passives) */
+  .hero-abilities {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,255,255,0.15);
+  }
+
+  .abilities-label {
+    font-size: 0.6em;
+    color: #066;
+    letter-spacing: 1.5px;
+    margin-bottom: 2px;
+  }
+
+  .ability-row {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 3px;
+    font-size: 0.7em;
+    border-left: 2px solid;
+  }
+
+  .ability-row.unlocked {
+    border-left-color: #0f8;
+  }
+
+  .ability-row.locked {
+    border-left-color: #333;
+    opacity: 0.55;
+  }
+
+  .ability-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ability-icon {
+    flex-shrink: 0;
+  }
+
+  .ability-name {
+    font-weight: bold;
+    color: #0fa;
+  }
+
+  .ability-row.locked .ability-name {
+    color: #088;
+  }
+
+  .ability-level-locked {
+    margin-left: auto;
+    font-size: 0.85em;
+    color: #faa;
+    font-weight: bold;
+  }
+
+  .ability-desc {
+    margin-top: 2px;
+    font-size: 0.9em;
+    color: #0aa;
+    line-height: 1.3;
+  }
+
+  .ability-row.locked .ability-desc {
+    color: #066;
   }
   
   .hero-portrait {
@@ -1226,7 +1299,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.2.00';
+const GAME_VERSION = '0.3.00';
 
 const HERO_CLASSES = [
   {
@@ -1239,7 +1312,12 @@ const HERO_CLASSES = [
     baseSpd: 1.0, // attacks per second
     unlocked: true,
     unlockCost: 0,
-    desc: 'Veteran ground-pounder. Balanced fighter.'
+    desc: 'Veteran ground-pounder. Balanced fighter.',
+    abilities: [
+      { id: 'bulwark',    unlockLevel: 5,  name: 'Bulwark',          desc: '-10% damage taken' },
+      { id: 'counter',    unlockLevel: 10, name: 'Counter-Strike',   desc: '25% chance to retaliate when hit (50% damage)' },
+      { id: 'discipline', unlockLevel: 25, name: 'Squad Discipline', desc: '+5% squad attack while alive (aura)' }
+    ]
   },
   {
     id: 'engineer',
@@ -1251,7 +1329,12 @@ const HERO_CLASSES = [
     baseSpd: 0.8,
     unlocked: false,
     unlockCost: 500,
-    desc: 'High damage, low HP. Rapid tech weapons.'
+    desc: 'High damage, low HP. Rapid tech weapons.',
+    abilities: [
+      { id: 'frag',       unlockLevel: 5,  name: 'Frag Grenade', desc: 'Every 5th attack hits all enemies for 75% damage' },
+      { id: 'overcharge', unlockLevel: 10, name: 'Overcharge',   desc: '+1% attack per 1% missing HP' },
+      { id: 'siege',      unlockLevel: 25, name: 'Siege Mode',   desc: '+50% damage to bosses' }
+    ]
   },
   {
     id: 'medic',
@@ -1264,7 +1347,12 @@ const HERO_CLASSES = [
     heal: 5, // heals allies each attack
     unlocked: false,
     unlockCost: 2000,
-    desc: 'Heals allies on each shot. Team support.'
+    desc: 'Heals allies on each shot. Team support.',
+    abilities: [
+      { id: 'triage',     unlockLevel: 5,  name: 'Triage',                desc: 'Heals double when target ally is below 30% HP' },
+      { id: 'stim',       unlockLevel: 10, name: 'Stim Surge',            desc: 'Squad recovers +10% HP on floor clear' },
+      { id: 'rez',        unlockLevel: 25, name: 'Resurrection Protocol', desc: 'Once per battle, prevent an ally\'s death (1 HP)' }
+    ]
   },
   {
     id: 'psion',
@@ -1277,7 +1365,12 @@ const HERO_CLASSES = [
     crit: 0.25, // 25% crit chance for 2x damage
     unlocked: false,
     unlockCost: 10000,
-    desc: 'Psychic strikes with high crit chance.'
+    desc: 'Psychic strikes with high crit chance.',
+    abilities: [
+      { id: 'mindspike',  unlockLevel: 5,  name: 'Mind Spike',     desc: 'Crits deal 3× damage instead of 2×' },
+      { id: 'echo',       unlockLevel: 10, name: 'Synaptic Echo',  desc: '15% chance to attack twice per cooldown' },
+      { id: 'voidres',    unlockLevel: 25, name: 'Void Resonance', desc: 'Each crit cuts squad attack cooldown by 0.15s' }
+    ]
   }
 ];
 
@@ -1533,8 +1626,35 @@ let combat = {
   logLines: [],
   isBoss: false,
   bossMechanicTimer: 0,
-  lastStandUsed: false
+  lastStandUsed: false,
+  resurrectionUsed: false
 };
+
+// Returns true if the named hero is unlocked and has reached the level threshold
+// for the given ability id (defined on HERO_CLASSES[*].abilities).
+function hasAbility(heroId, abilityId) {
+  const def = HERO_CLASSES.find(h => h.id === heroId);
+  if (!def || !def.abilities) return false;
+  const ability = def.abilities.find(a => a.id === abilityId);
+  if (!ability) return false;
+  const save = state.heroes[heroId];
+  if (!save || !save.unlocked) return false;
+  return save.level >= ability.unlockLevel;
+}
+
+// Centralised kill-tracking so AoE / counter paths can reuse it without
+// duplicating the bookkeeping in doAttack's death branch.
+function trackEnemyKill(enemy) {
+  if (enemy.isBoss) {
+    state.stats.bossesKilled++;
+    const bname = enemy.boss.name;
+    state.stats.bossKillsByName[bname] = (state.stats.bossKillsByName[bname] || 0) + 1;
+  } else {
+    state.stats.enemiesKilled++;
+    const tname = enemy.type ? enemy.type.name : enemy.name;
+    state.stats.enemyKillsByType[tname] = (state.stats.enemyKillsByType[tname] || 0) + 1;
+  }
+}
 
 // ============ UTILITIES ============
 
@@ -1687,7 +1807,8 @@ function setupCombat() {
     hp: h.maxHp,
     atkCooldown: Math.random() * (1 / h.spd), // stagger attacks
     isHero: true,
-    dead: false
+    dead: false,
+    attackCount: 0
   }));
   
   // Create enemies for current floor
@@ -1695,6 +1816,7 @@ function setupCombat() {
   combat.isBoss = BOSSES.some(b => b.floor === state.floor);
   combat.bossMechanicTimer = 0;
   combat.lastStandUsed = false;
+  combat.resurrectionUsed = false;
 
   renderUnits();
 }
@@ -1799,6 +1921,17 @@ function combatTick() {
     state.stats.lifetimeScrap += totalScrap;
     state.stats.floorsCleared++;
     log(`✓ Cleared! +${totalCred} CR +${totalScrap}⚙`, 'loot');
+
+    // Stim Surge (Medic L10): squad recovers +10% HP on floor clear
+    if (hasAbility('medic', 'stim')) {
+      let stimmed = 0;
+      combat.heroUnits.forEach(h => {
+        if (h.dead || h.hp >= h.maxHp) return;
+        h.hp = Math.min(h.maxHp, h.hp + Math.floor(h.maxHp * 0.10));
+        stimmed++;
+      });
+      if (stimmed > 0) log(`💊 Stim Surge — squad recovers 10% HP`, 'loot');
+    }
     
     // Boss drops guaranteed loot
     if (combat.isBoss) {
@@ -1893,6 +2026,16 @@ function combatTick() {
       hero.atkCooldown = 1 / hero.spd;
       const target = combat.enemyUnits.find(u => !u.dead);
       if (target) doAttack(hero, target);
+
+      // Synaptic Echo (Psion L10): 15% chance to attack again on the same cooldown.
+      // Re-fetches target in case the first attack killed the previous one.
+      if (!hero.dead && hero.id === 'psion' && hasAbility('psion', 'echo') && Math.random() < 0.15) {
+        const target2 = combat.enemyUnits.find(u => !u.dead);
+        if (target2) {
+          log(`🌀 Synaptic Echo!`, 'crit');
+          doAttack(hero, target2);
+        }
+      }
     }
   });
   
@@ -1909,27 +2052,68 @@ function combatTick() {
 }
 
 function doAttack(attacker, defender) {
+  // Frag Grenade (Engineer L5): every 5th attack hits all enemies for 75% damage,
+  // replacing the regular single-target hit. The counter is per-hero-unit.
+  if (attacker.isHero && attacker.id === 'engineer' && hasAbility('engineer', 'frag')) {
+    attacker.attackCount = (attacker.attackCount || 0) + 1;
+    if (attacker.attackCount % 5 === 0) {
+      doFragGrenade(attacker);
+      return;
+    }
+  }
+
   let dmg = attacker.atk;
   let crit = false;
-  
+
+  // Squad Discipline (Marine L25): +5% squad attack while Marine is alive (aura)
+  if (attacker.isHero && hasAbility('marine', 'discipline')) {
+    const marineAlive = combat.heroUnits.some(u => u.id === 'marine' && !u.dead);
+    if (marineAlive) dmg = Math.floor(dmg * 1.05);
+  }
+
+  // Overcharge (Engineer L10): +1% atk per 1% missing HP
+  if (attacker.isHero && attacker.id === 'engineer' && hasAbility('engineer', 'overcharge')) {
+    const missingPct = 1 - (attacker.hp / attacker.maxHp);
+    dmg = Math.floor(dmg * (1 + missingPct));
+  }
+
+  // Siege Mode (Engineer L25): +50% damage to bosses
+  if (attacker.isHero && attacker.id === 'engineer' && defender.isBoss && hasAbility('engineer', 'siege')) {
+    dmg = Math.floor(dmg * 1.5);
+  }
+
   // Hero crits — base crit (psion has natural) + prestige skill crit
   if (attacker.isHero) {
     const baseCrit = attacker.def.crit || 0;
     const skillCrit = getSkillBonus('crit_chance');
     const totalCrit = baseCrit + skillCrit;
     if (totalCrit > 0 && Math.random() < totalCrit) {
-      dmg *= 2;
+      // Mind Spike (Psion L5): crits do 3× instead of 2×
+      const critMult = (attacker.id === 'psion' && hasAbility('psion', 'mindspike')) ? 3 : 2;
+      dmg *= critMult;
       crit = true;
+
+      // Void Resonance (Psion L25): each crit cuts squad attack cooldowns by 0.15s
+      if (attacker.id === 'psion' && hasAbility('psion', 'voidres')) {
+        combat.heroUnits.forEach(h => {
+          if (!h.dead) h.atkCooldown = Math.max(0, h.atkCooldown - 0.15);
+        });
+      }
     }
   }
-  
+
   // Variance ±15%
   dmg = Math.floor(dmg * (0.85 + Math.random() * 0.3));
 
-  // Reactive Plating: heroes take reduced damage from prestige skill
+  // Reactive Plating (prestige): heroes take reduced damage
   if (defender.isHero) {
     const reduction = Math.min(0.75, getSkillBonus('dmg_reduce'));
     if (reduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - reduction)));
+
+    // Bulwark (Marine L5): additional -10% damage taken
+    if (defender.id === 'marine' && hasAbility('marine', 'bulwark')) {
+      dmg = Math.max(1, Math.floor(dmg * 0.9));
+    }
   }
 
   // Track damage stats
@@ -1940,7 +2124,7 @@ function doAttack(attacker, defender) {
   } else {
     state.stats.damageTaken += dmg;
   }
-  
+
   // Apply shield first if boss has one
   if (defender.shield && defender.shield > 0) {
     const shieldDmg = Math.min(defender.shield, dmg);
@@ -1950,29 +2134,50 @@ function doAttack(attacker, defender) {
       log(`💥 ${defender.name}'s shield breaks!`, 'crit');
     }
   }
-  
+
   defender.hp -= dmg;
-  
+
   // Lifesteal (certain bosses)
   if (!attacker.isHero && attacker.boss && (attacker.boss.mechanic === 'lifesteal' || attacker.boss.mechanic === 'all')) {
     attacker.hp = Math.min(attacker.maxHp, attacker.hp + Math.floor(dmg * 0.3));
   }
-  
-  // Medic heal
+
+  // Medic heal — Triage (Medic L5) doubles the heal for allies below 30% HP
   if (attacker.isHero && attacker.def.heal) {
-    const healAmount = Math.floor(attacker.def.heal * Math.pow(1.15, attacker.level - 1));
+    const baseHeal = attacker.def.heal * Math.pow(1.15, attacker.level - 1);
+    const triageOn = hasAbility('medic', 'triage');
     combat.heroUnits.forEach(h => {
       if (!h.dead && h.id !== attacker.id) {
-        h.hp = Math.min(h.maxHp, h.hp + healAmount);
+        const lowHp = (h.hp / h.maxHp) < 0.3;
+        const heal = Math.floor(baseHeal * (triageOn && lowHp ? 2 : 1));
+        h.hp = Math.min(h.maxHp, h.hp + heal);
       }
     });
   }
-  
+
+  // Counter-Strike (Marine L10): 25% chance to retaliate when an enemy hits Marine
+  if (defender.isHero && defender.id === 'marine' && !defender.dead && defender.hp > 0
+      && hasAbility('marine', 'counter') && !attacker.isHero && !attacker.dead) {
+    if (Math.random() < 0.25) doCounterStrike(defender, attacker);
+  }
+
   // Death check
   if (defender.hp <= 0) {
-    // Last Stand: first hero to fall this battle revives at a % of max HP
     let revived = false;
-    if (defender.isHero && !combat.lastStandUsed) {
+
+    // Resurrection Protocol (Medic L25): once per battle, save an ally from death
+    if (defender.isHero && !combat.resurrectionUsed && hasAbility('medic', 'rez')) {
+      const medic = combat.heroUnits.find(u => u.id === 'medic' && !u.dead);
+      if (medic && medic.id !== defender.id) {
+        combat.resurrectionUsed = true;
+        defender.hp = 1;
+        log(`💊 Medic's Resurrection Protocol saves ${defender.def.name}!`, 'crit');
+        revived = true;
+      }
+    }
+
+    // Last Stand (prestige): first hero to fall this battle revives at a % of max HP
+    if (!revived && defender.isHero && !combat.lastStandUsed) {
       const revivePct = getSkillBonus('last_stand_pct');
       if (revivePct > 0) {
         combat.lastStandUsed = true;
@@ -1991,22 +2196,70 @@ function doAttack(attacker, defender) {
         log(`${defender.def.name} is down!`, 'boss');
       } else {
         // Enemy/boss killed
-        if (defender.isBoss) {
-          state.stats.bossesKilled++;
-          const bname = defender.boss.name;
-          state.stats.bossKillsByName[bname] = (state.stats.bossKillsByName[bname] || 0) + 1;
-        } else {
-          state.stats.enemiesKilled++;
-          const tname = defender.type ? defender.type.name : defender.name;
-          state.stats.enemyKillsByType[tname] = (state.stats.enemyKillsByType[tname] || 0) + 1;
-        }
+        trackEnemyKill(defender);
       }
     }
   }
-  
+
   showDamage(defender, dmg, crit);
   animateAttack(attacker, defender);
   renderUnits();
+}
+
+// Engineer's Frag Grenade (L5): single AoE pulse that replaces a normal attack.
+// Damage is 75% of base atk per enemy with the same ±15% variance, no crits.
+function doFragGrenade(engineer) {
+  const baseDmg = Math.floor(engineer.atk * 0.75);
+  log(`💥 Engineer's Frag Grenade!`, 'crit');
+  combat.enemyUnits.forEach(enemy => {
+    if (enemy.dead) return;
+    let dmg = Math.floor(baseDmg * (0.85 + Math.random() * 0.3));
+    state.stats.damageDealt += dmg;
+    if (dmg > state.stats.biggestHit) state.stats.biggestHit = dmg;
+
+    if (enemy.shield && enemy.shield > 0) {
+      const shieldDmg = Math.min(enemy.shield, dmg);
+      enemy.shield -= shieldDmg;
+      dmg -= shieldDmg;
+      if (enemy.shield <= 0 && shieldDmg > 0) {
+        log(`💥 ${enemy.name}'s shield breaks!`, 'crit');
+      }
+    }
+    enemy.hp -= dmg;
+    showDamage(enemy, dmg, false);
+
+    if (enemy.hp <= 0) {
+      enemy.hp = 0;
+      enemy.dead = true;
+      trackEnemyKill(enemy);
+    }
+  });
+  const target = combat.enemyUnits.find(u => !u.dead) || combat.enemyUnits[0];
+  if (target) animateAttack(engineer, target);
+  renderUnits();
+}
+
+// Marine's Counter-Strike (L10): inline retaliation. 50% damage of marine's atk
+// with normal variance, no crit, applied directly to the offending attacker.
+function doCounterStrike(marine, target) {
+  let dmg = Math.floor(marine.atk * 0.5 * (0.85 + Math.random() * 0.3));
+  state.stats.damageDealt += dmg;
+  if (dmg > state.stats.biggestHit) state.stats.biggestHit = dmg;
+
+  if (target.shield && target.shield > 0) {
+    const shieldDmg = Math.min(target.shield, dmg);
+    target.shield -= shieldDmg;
+    dmg -= shieldDmg;
+  }
+  target.hp -= dmg;
+  log(`⚡ Counter-Strike! (${dmg})`, 'crit');
+  showDamage(target, dmg, false);
+
+  if (target.hp <= 0) {
+    target.hp = 0;
+    target.dead = true;
+    trackEnemyKill(target);
+  }
 }
 
 // ============ LOOT GENERATION ============
@@ -2350,6 +2603,27 @@ function renderSquad() {
       });
       equipHtml += '</div>';
       
+      // Build abilities display
+      let abilHtml = '';
+      if (def.abilities && def.abilities.length > 0) {
+        abilHtml = '<div class="hero-abilities"><div class="abilities-label">▸ ABILITIES</div>';
+        def.abilities.forEach(ability => {
+          const unlocked = save.level >= ability.unlockLevel;
+          const cls = unlocked ? 'unlocked' : 'locked';
+          const icon = unlocked ? '✓' : '🔒';
+          const lvlBadge = unlocked ? '' : `<span class="ability-level-locked">Lv${ability.unlockLevel}</span>`;
+          abilHtml += `<div class="ability-row ${cls}">
+            <div class="ability-header">
+              <span class="ability-icon">${icon}</span>
+              <span class="ability-name">${ability.name}</span>
+              ${lvlBadge}
+            </div>
+            <div class="ability-desc">${ability.desc}</div>
+          </div>`;
+        });
+        abilHtml += '</div>';
+      }
+
       div.innerHTML = `
         <div class="hero-header">
           <div class="hero-portrait">${def.icon}</div>
@@ -2364,6 +2638,7 @@ function renderSquad() {
             LV+<br>${format(cost)} CR
           </button>
         </div>
+        ${abilHtml}
         ${equipHtml}
       `;
       
