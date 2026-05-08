@@ -1,0 +1,60 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Node / npm (in case you add tooling later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build output (in case you add a build step later)
+dist/
+build/
+out/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Logs & temp files
+*.log
+tmp/
+temp/
+*.tmp
+
+# Test/playground files
+test.html
+scratch.html
+playground/
+
+# Local backup save files (if you ever export saves to disk)
+*.save
+*.bak
+
+# Capacitor / Cordova (for future Android wrapping)
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/App/Pods/
+ios/App/build/
+www/
+
+# macOS Finder
+.AppleDouble
+.LSOverride
