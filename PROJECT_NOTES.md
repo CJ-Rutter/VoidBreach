@@ -21,11 +21,11 @@
 
 ## Current version
 
-**v0.1.00** — defined in the `GAME_VERSION` constant near the top of the `<script>` block. Displayed in the SYS panel.
+**v0.4.00** — defined in the `GAME_VERSION` constant near the top of the `<script>` block. Displayed in the SYS panel.
 
 Versioning convention: `MAJOR.MINOR.PATCH`
-- Patch (0.1.0**1**): bug fixes, balance tweaks, copy changes
-- Minor (0.**2**.00): new feature shipped (e.g. new skill branch, new hero, crafting system)
+- Patch (0.1.0**1**): bug fixes, balance tweaks, copy changes shipped on their own
+- Minor (0.**2**.00): new feature shipped (e.g. new skill branch, new hero, crafting system) — also covers a feature commit that bundles small fixes alongside; no separate patch needed
 - Major (**1**.0.00): reserved for the first "complete" release, ideally Play Store launch
 
 Bump the constant whenever you commit a release. Don't bump for WIP commits.

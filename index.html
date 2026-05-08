@@ -1068,9 +1068,42 @@
     border-color: #f55;
     color: #f88;
   }
-  
+
   .ctrl-btn:active {
     background: rgba(0,255,255,0.3);
+  }
+
+  /* Combat speed control */
+  .speed-control {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .speed-btn {
+    background: rgba(0,40,60,0.4);
+    border: 1px solid #066;
+    color: #088;
+    padding: 12px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1em;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.15s;
+  }
+
+  .speed-btn.active {
+    background: rgba(0,80,80,0.6);
+    border-color: #0ff;
+    color: #0ff;
+    box-shadow: 0 0 10px rgba(0,255,255,0.3);
+  }
+
+  .speed-btn:active {
+    transform: scale(0.97);
   }
   
   .version-info {
@@ -1266,6 +1299,14 @@
   
   <div class="tab-panel" id="tab-system">
     <div class="panel">
+      <div class="panel-title">▸ COMBAT SPEED</div>
+      <div class="speed-control" id="speedControl">
+        <button class="speed-btn" data-speed="1">1×</button>
+        <button class="speed-btn" data-speed="2">2×</button>
+        <button class="speed-btn" data-speed="4">4×</button>
+      </div>
+    </div>
+    <div class="panel">
       <div class="panel-title">▸ GAME CONTROLS</div>
       <div class="controls">
         <button class="ctrl-btn" id="saveBtn">💾 SAVE</button>
@@ -1299,7 +1340,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.3.00';
+const GAME_VERSION = '0.4.00';
 
 const HERO_CLASSES = [
   {
@@ -1581,6 +1622,7 @@ let state = {
   floor: 1,
   maxFloor: 1,
   chapter: 1,
+  combatSpeed: 1,
   heroes: {
     marine:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: true },
     engineer: { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
@@ -3322,7 +3364,7 @@ function loadGame(silent) {
     
     // Merge with defaults to handle updates
     state = Object.assign({
-      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1,
+      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1,
       heroes: {
         marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
         engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
@@ -3400,6 +3442,17 @@ function importSave() {
   setTimeout(() => modalTextarea.focus(), 100);
 }
 
+// Combat speed control: highlight the active pill, wire taps for all three.
+function renderSpeedControl() {
+  const speed = state.combatSpeed || 1;
+  document.querySelectorAll('#speedControl .speed-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.speed) === speed);
+  });
+}
+document.querySelectorAll('#speedControl .speed-btn').forEach(btn => {
+  attachTap(btn, () => setCombatSpeed(parseInt(btn.dataset.speed)));
+});
+
 attachTap(document.getElementById('saveBtn'), () => saveGame(false));
 attachTap(document.getElementById('loadBtn'), () => loadGame(false));
 attachTap(document.getElementById('exportBtn'), () => exportSave());
@@ -3424,7 +3477,7 @@ attachTap(document.getElementById('resetBtn'), () => {
     'Erase all progress including heroes, loot, stats, and story. This cannot be undone.',
     () => {
       state = {
-        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1,
+        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1,
         heroes: {
           marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
           engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
@@ -3457,6 +3510,7 @@ function renderAll() {
   renderPrestige();
   renderStory();
   renderUnits();
+  renderSpeedControl();
 }
 
 // Try load, else start fresh
@@ -3469,8 +3523,22 @@ if (!loadGame(true)) {
 }
 renderAll();
 
-// Main game loop
-setInterval(combatTick, TICK_MS);
+// Main game loop — interval is rebuilt when combat speed changes
+let _combatLoopId = null;
+function startCombatLoop() {
+  if (_combatLoopId !== null) clearInterval(_combatLoopId);
+  const speed = state.combatSpeed || 1;
+  _combatLoopId = setInterval(combatTick, TICK_MS / speed);
+}
+startCombatLoop();
+
+function setCombatSpeed(speed) {
+  if (![1, 2, 4].includes(speed)) return;
+  state.combatSpeed = speed;
+  startCombatLoop();
+  renderSpeedControl();
+  saveGame(true);
+}
 
 // Playtime + stats refresh: tick every second, only update display if stats tab is open
 let _lastPlaytimeUpdate = Date.now();

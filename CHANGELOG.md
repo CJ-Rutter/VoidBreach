@@ -14,8 +14,17 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 - Squad-selection UI (pick 4 of N unlocked heroes) — prerequisite for expanding the roster past 4
 - 3 new heroes (Sniper / Tank / Summoner)
 - Power skill branch (boss damage, 5th hero unlock)
-- Combat speed control (1× / 2× / 4×)
 - Sound effects
+
+---
+
+## [0.4.00] — Combat Speed Control
+
+### Added
+- **Combat speed control** — toggle between **1× / 2× / 4×** from the SYS tab. Persists across saves. Auto-save and playtime tracking remain on real-time so faster speeds don't distort either.
+
+### Changed
+- `PROJECT_NOTES.md` — current-version pointer fixed (was stale at 0.1.00) and Minor-bump rule clarified to cover feature commits that bundle small fixes.
 
 ---
 
