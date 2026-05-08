@@ -11,10 +11,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and thi
 Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the full roadmap.
 
 ### Likely next
-- Survival skill branch (revive, regen, damage reduction)
 - Power skill branch (boss damage, 5th hero)
 - Combat speed control (1× / 2× / 4×)
 - Sound effects
+
+---
+
+## [0.2.00] — Survival Branch
+
+### Added
+- **🛡 Survival skill tree branch** with 3 new prestige skills:
+  - **Reactive Plating** (5 levels) — -3% squad damage taken per level
+  - **Regeneration Field** (3 levels) — +1% squad max HP/sec passive regen per level
+  - **Last Stand** (3 levels) — first fallen hero per battle revives at +25% HP per level
 
 ---
 

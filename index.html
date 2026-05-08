@@ -1211,7 +1211,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.1.00';
+const GAME_VERSION = '0.2.00';
 
 const HERO_CLASSES = [
   {
@@ -1398,6 +1398,14 @@ const SKILL_TREE = [
   { id: 'crit_net', name: 'Critical Network', desc: '+3% squad-wide crit chance per level',
     branch: 'combat', maxLevel: 3, costs: [3,7,15], effect: 'crit_chance', value: 0.03 },
 
+  // 🛡 Survival branch
+  { id: 'react_plate', name: 'Reactive Plating', desc: '-3% squad damage taken per level',
+    branch: 'survival', maxLevel: 5, costs: [1,2,4,8,16], effect: 'dmg_reduce', value: 0.03 },
+  { id: 'regen_field', name: 'Regeneration Field', desc: '+1% squad max HP/sec passive regen per level',
+    branch: 'survival', maxLevel: 3, costs: [2,5,12], effect: 'regen_pct', value: 0.01 },
+  { id: 'last_stand',  name: 'Last Stand', desc: 'First fallen hero per battle revives at +25% HP per level',
+    branch: 'survival', maxLevel: 3, costs: [3,7,15], effect: 'last_stand_pct', value: 0.25 },
+
   // 💰 Economy branch
   { id: 'salvage',  name: 'Salvage Protocols', desc: '+10% credits earned per level',
     branch: 'economy', maxLevel: 5, costs: [1,2,4,8,16], effect: 'credits_pct', value: 0.10 },
@@ -1420,9 +1428,10 @@ const SKILL_TREE = [
 ];
 
 const SKILL_BRANCHES = {
-  combat:  { name: '⚔ COMBAT',  color: '#ff6666' },
-  economy: { name: '💰 ECONOMY', color: '#ffd700' },
-  loot:    { name: '🎁 LOOT',   color: '#aa55ff' }
+  combat:   { name: '⚔ COMBAT',   color: '#ff6666' },
+  survival: { name: '🛡 SURVIVAL', color: '#66ff99' },
+  economy:  { name: '💰 ECONOMY', color: '#ffd700' },
+  loot:     { name: '🎁 LOOT',    color: '#aa55ff' }
 };
 
 // Calculate shards earned from a given max floor (diminishing returns)
@@ -1508,7 +1517,8 @@ let combat = {
   enemyUnits: [],
   logLines: [],
   isBoss: false,
-  bossMechanicTimer: 0
+  bossMechanicTimer: 0,
+  lastStandUsed: false
 };
 
 // ============ UTILITIES ============
@@ -1669,7 +1679,8 @@ function setupCombat() {
   combat.enemyUnits = generateEnemies(state.floor);
   combat.isBoss = BOSSES.some(b => b.floor === state.floor);
   combat.bossMechanicTimer = 0;
-  
+  combat.lastStandUsed = false;
+
   renderUnits();
 }
 
@@ -1782,11 +1793,6 @@ function combatTick() {
       state.stats.itemsFound++;
       state.stats.rarityCounts[RARITY_NAMES[item.rarity]]++;
       log(`🎁 LEGENDARY DROP: ${item.displayName}`, 'loot');
-      
-      // Unlock next heroes after bosses
-      if (boss.chapter === 1 && !state.heroes.engineer.unlocked) {
-        // Make engineer affordable after first boss
-      }
     } else if (Math.random() < 0.15 + state.floor * 0.002 + getSkillBonus('drop_chance')) {
       // Regular enemies have chance to drop loot
       const item = generateLoot(state.floor);
@@ -1855,6 +1861,15 @@ function combatTick() {
     }
   }
   
+  // Regeneration Field: passive HP regen for living heroes
+  const regenPctPerSec = getSkillBonus('regen_pct');
+  if (regenPctPerSec > 0) {
+    combat.heroUnits.forEach(hero => {
+      if (hero.dead || hero.hp >= hero.maxHp) return;
+      hero.hp = Math.min(hero.maxHp, hero.hp + hero.maxHp * regenPctPerSec * TICK_SEC);
+    });
+  }
+
   // Hero attacks
   combat.heroUnits.forEach(hero => {
     if (hero.dead) return;
@@ -1895,7 +1910,13 @@ function doAttack(attacker, defender) {
   
   // Variance ±15%
   dmg = Math.floor(dmg * (0.85 + Math.random() * 0.3));
-  
+
+  // Reactive Plating: heroes take reduced damage from prestige skill
+  if (defender.isHero) {
+    const reduction = Math.min(0.75, getSkillBonus('dmg_reduce'));
+    if (reduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - reduction)));
+  }
+
   // Track damage stats
   if (attacker.isHero) {
     state.stats.damageDealt += dmg;
@@ -1934,22 +1955,36 @@ function doAttack(attacker, defender) {
   
   // Death check
   if (defender.hp <= 0) {
-    defender.hp = 0;
-    defender.dead = true;
-    if (!attacker.isHero) {
-      // Hero died
-      state.stats.heroDeaths++;
-      log(`${defender.def.name} is down!`, 'boss');
-    } else {
-      // Enemy/boss killed
-      if (defender.isBoss) {
-        state.stats.bossesKilled++;
-        const bname = defender.boss.name;
-        state.stats.bossKillsByName[bname] = (state.stats.bossKillsByName[bname] || 0) + 1;
+    // Last Stand: first hero to fall this battle revives at a % of max HP
+    let revived = false;
+    if (defender.isHero && !combat.lastStandUsed) {
+      const revivePct = getSkillBonus('last_stand_pct');
+      if (revivePct > 0) {
+        combat.lastStandUsed = true;
+        defender.hp = Math.max(1, Math.floor(defender.maxHp * revivePct));
+        log(`✨ ${defender.def.name} refuses to fall! (Last Stand)`, 'crit');
+        revived = true;
+      }
+    }
+
+    if (!revived) {
+      defender.hp = 0;
+      defender.dead = true;
+      if (!attacker.isHero) {
+        // Hero died
+        state.stats.heroDeaths++;
+        log(`${defender.def.name} is down!`, 'boss');
       } else {
-        state.stats.enemiesKilled++;
-        const tname = defender.type ? defender.type.name : defender.name;
-        state.stats.enemyKillsByType[tname] = (state.stats.enemyKillsByType[tname] || 0) + 1;
+        // Enemy/boss killed
+        if (defender.isBoss) {
+          state.stats.bossesKilled++;
+          const bname = defender.boss.name;
+          state.stats.bossKillsByName[bname] = (state.stats.bossKillsByName[bname] || 0) + 1;
+        } else {
+          state.stats.enemiesKilled++;
+          const tname = defender.type ? defender.type.name : defender.name;
+          state.stats.enemyKillsByType[tname] = (state.stats.enemyKillsByType[tname] || 0) + 1;
+        }
       }
     }
   }

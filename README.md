@@ -8,7 +8,7 @@
 
 ## 🎮 Play
 
-Drop `void_breach.html` into your browser, or play the live build (if GitHub Pages is enabled): **[link to your GitHub Pages URL once deployed]**
+Drop `index.html` into your browser, or play the live build (if GitHub Pages is enabled): **[link to your GitHub Pages URL once deployed]**
 
 The game is mobile-first — works great on a phone in portrait mode. Open the link on your phone and add it to your home screen for an app-like experience.
 
@@ -74,14 +74,13 @@ To run locally:
 ```bash
 git clone https://github.com/USERNAME/void-breach.git
 cd void-breach
-# Just open void_breach.html in your browser
+# Just open index.html in your browser
 ```
 
 To deploy via GitHub Pages:
 1. Push to `main`
 2. Repo Settings → Pages → Source: `main` branch, `/` (root)
 3. Game will be live at `https://USERNAME.github.io/void-breach/`
-4. (Optional) Rename `void_breach.html` to `index.html` so the URL is cleaner
 
 For active development, see [PROJECT_NOTES.md](PROJECT_NOTES.md) for architecture, conventions, and design decisions.
 

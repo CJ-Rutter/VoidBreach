@@ -11,7 +11,7 @@
 **Target platform:** Mobile-first web game, designed to eventually be wrapped with Capacitor or PWA Builder for the Google Play Store.
 
 **Tech stack:**
-- Single `void_breach.html` file (no build step, no dependencies)
+- Single `index.html` file (no build step, no dependencies)
 - Vanilla JS, no frameworks
 - CSS-in-`<style>`-tag, no external stylesheets
 - `localStorage` for persistence
@@ -36,14 +36,14 @@ Bump the constant whenever you commit a release. Don't bump for WIP commits.
 
 ```
 void-breach/
-├── void_breach.html       # The entire game. Single file, ~3000 lines.
+├── index.html             # The entire game. Single file, ~3000 lines.
 ├── README.md              # Public-facing overview
 ├── PROJECT_NOTES.md       # This file
 ├── CHANGELOG.md           # Version history
 └── .gitignore
 ```
 
-If you rename `void_breach.html` to `index.html` and enable GitHub Pages, the game will be playable at `https://USERNAME.github.io/REPO_NAME/`.
+With `index.html` as the entry file, enabling GitHub Pages makes the game playable at `https://USERNAME.github.io/REPO_NAME/`.
 
 ---
 
@@ -203,13 +203,13 @@ These were brainstormed but not yet built:
 
 There's no build step. To iterate:
 
-1. Edit `void_breach.html`
+1. Edit `index.html`
 2. Open it in a browser (Chrome DevTools mobile emulator is good for testing mobile layout)
 3. For real device testing: commit + push, then on phone use the **🔄 FORCE RELOAD** button in the SYS tab to bypass cache after a deploy
 
 For local sanity-checking JS syntax without a browser:
 ```bash
-node -e "const fs = require('fs'); const html = fs.readFileSync('void_breach.html', 'utf8'); const m = html.match(/<script>([\\s\\S]*?)<\\/script>/); new Function(m[1]); console.log('OK');"
+node -e "const fs = require('fs'); const html = fs.readFileSync('index.html', 'utf8'); const m = html.match(/<script>([\\s\\S]*?)<\\/script>/); new Function(m[1]); console.log('OK');"
 ```
 
 ---
