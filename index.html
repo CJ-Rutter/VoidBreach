@@ -1340,7 +1340,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.4.00';
+const GAME_VERSION = '0.4.01';
 
 const HERO_CLASSES = [
   {
@@ -1427,10 +1427,10 @@ const ENEMY_TYPES = [
 ];
 
 const BOSSES = [
-  { 
+  {
     floor: 10, chapter: 1,
     name: 'The Maw Overseer', icon: '👁️',
-    hpMult: 8, atkMult: 1.5,
+    hpMult: 5, atkMult: 1.4,
     mechanic: 'shield', shieldPct: 0.5, // regenerates shield at 50% hp
     credits: 100, scrap: 25,
     lootChance: 1.0, lootTier: 'rare',
@@ -1439,7 +1439,7 @@ const BOSSES = [
   {
     floor: 25, chapter: 2,
     name: 'Hive Queen Zy\'kara', icon: '🦟',
-    hpMult: 12, atkMult: 1.8,
+    hpMult: 8, atkMult: 1.7,
     mechanic: 'summon', // summons swarmlings periodically
     credits: 300, scrap: 60,
     lootChance: 1.0, lootTier: 'epic',
@@ -1448,7 +1448,7 @@ const BOSSES = [
   {
     floor: 50, chapter: 3,
     name: 'Warlord Krex-Tor', icon: '👹',
-    hpMult: 20, atkMult: 2.5,
+    hpMult: 12, atkMult: 2.2,
     mechanic: 'enrage', enrageAt: 0.3, // +100% atk below 30%
     credits: 800, scrap: 150,
     lootChance: 1.0, lootTier: 'epic',
@@ -1457,7 +1457,7 @@ const BOSSES = [
   {
     floor: 100, chapter: 4,
     name: 'The Devourer', icon: '🌀',
-    hpMult: 40, atkMult: 3.5,
+    hpMult: 18, atkMult: 3.0,
     mechanic: 'lifesteal', // heals on hit
     credits: 3000, scrap: 500,
     lootChance: 1.0, lootTier: 'legendary',
@@ -1466,7 +1466,7 @@ const BOSSES = [
   {
     floor: 200, chapter: 5,
     name: 'Null-Sovereign Xal', icon: '💀',
-    hpMult: 100, atkMult: 5,
+    hpMult: 25, atkMult: 4.0,
     mechanic: 'all', // shield + summon + enrage
     shieldPct: 0.6,
     enrageAt: 0.25,
@@ -1867,8 +1867,8 @@ function generateEnemies(floor) {
   // Check if this is a boss floor
   const boss = BOSSES.find(b => b.floor === floor);
   if (boss) {
-    const baseHp = 40 * Math.pow(1.25, floor);
-    const baseAtk = 8 * Math.pow(1.20, floor);
+    const baseHp = 40 * Math.pow(1.16, floor);
+    const baseAtk = 8 * Math.pow(1.15, floor);
     log(`⚠ BOSS ENCOUNTER: ${boss.name}`, 'boss');
     log(boss.desc, 'boss');
     state.stats.bossesEncountered++;
@@ -1902,8 +1902,8 @@ function generateEnemies(floor) {
   
   for (let i = 0; i < count; i++) {
     const type = randChoice(pool);
-    const baseHp = 25 * Math.pow(1.22, floor);
-    const baseAtk = 5 * Math.pow(1.18, floor);
+    const baseHp = 25 * Math.pow(1.18, floor);
+    const baseAtk = 5 * Math.pow(1.15, floor);
     enemies.push({
       id: type.id + '_' + i + '_' + Date.now(),
       name: type.name,
@@ -2031,8 +2031,8 @@ function combatTick() {
       combat.bossMechanicTimer += TICK_SEC;
       if (combat.bossMechanicTimer >= 8 && combat.enemyUnits.filter(u => !u.dead).length < 3) {
         combat.bossMechanicTimer = 0;
-        const baseHp = 25 * Math.pow(1.22, state.floor) * 0.3;
-        const baseAtk = 5 * Math.pow(1.18, state.floor) * 0.4;
+        const baseHp = 25 * Math.pow(1.18, state.floor) * 0.3;
+        const baseAtk = 5 * Math.pow(1.15, state.floor) * 0.4;
         combat.enemyUnits.push({
           id: 'swarm_' + Date.now(),
           name: 'Swarmling',
