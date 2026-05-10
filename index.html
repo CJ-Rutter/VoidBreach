@@ -1340,7 +1340,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.4.01';
+const GAME_VERSION = '0.4.02';
 
 const HERO_CLASSES = [
   {
@@ -1807,7 +1807,9 @@ function getHeroStats(heroId) {
 
 function getHeroLevelCost(heroId) {
   const level = state.heroes[heroId].level;
-  const baseCost = 50 * Math.pow(1.6, level - 1);
+  // Polynomial growth (L^2.2) instead of exponential (1.6^L) — keeps high-level
+  // leveling tractable so hero scaling can keep pace with floor scaling.
+  const baseCost = 50 * Math.pow(level, 2.2);
   const reduction = Math.min(0.75, getSkillBonus('hero_cost_reduce'));
   return Math.floor(baseCost * (1 - reduction));
 }
@@ -1913,8 +1915,8 @@ function generateEnemies(floor) {
       atk: Math.floor(baseAtk * type.atkMult),
       spd: 0.9,
       atkCooldown: Math.random() * 1.1,
-      credits: type.credits * Math.ceil(floor / 3),
-      scrap: type.scrap * Math.ceil(floor / 5),
+      credits: type.credits * Math.max(1, 1 + Math.floor(floor / 2)),
+      scrap: type.scrap * Math.max(1, 1 + Math.floor(floor / 4)),
       type: type,
       dead: false
     });

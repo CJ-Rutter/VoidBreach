@@ -18,6 +18,17 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.4.02] — Economy Rebalance
+
+### Changed
+- **Hero level cost is now polynomial (`L^2.2`) instead of exponential (`1.6^L`).** Old curve made leveling past ~L40 effectively impossible (L50 cost ~500B credits, L100 ~8×10²¹). New curve: L50 ≈ 273K, L100 ≈ 1.26M, L200 ≈ 5.77M — meaningful scaling without runaway. Cumulative credits to reach high levels is now within reach of normal play.
+- **Credits & scrap per regular kill scale better with floor.** Credits use `1 + floor(F/2)` (was `ceil(F/3)`), scrap uses `1 + floor(F/4)` (was `ceil(F/5)`). ~50% boost at high floors so hero leveling can keep pace with the floor curve.
+
+### Why
+Previous patch (0.4.01) softened enemy scaling, but a second wall remained: even with reasonable enemy HP, hero leveling stalled because each level cost 1.6× the last while credits per floor only grew linearly. Polynomial cost + better credit scaling fixes that.
+
+---
+
 ## [0.4.01] — Scaling Rebalance
 
 ### Changed
