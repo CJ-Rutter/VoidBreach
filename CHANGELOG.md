@@ -18,6 +18,28 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.4.02] — Economy Rebalance
+
+### Changed
+- **Hero level cost is now polynomial (`L^2.2`) instead of exponential (`1.6^L`).** Old curve made leveling past ~L40 effectively impossible (L50 cost ~500B credits, L100 ~8×10²¹). New curve: L50 ≈ 273K, L100 ≈ 1.26M, L200 ≈ 5.77M — meaningful scaling without runaway. Cumulative credits to reach high levels is now within reach of normal play.
+- **Credits & scrap per regular kill scale better with floor.** Credits use `1 + floor(F/2)` (was `ceil(F/3)`), scrap uses `1 + floor(F/4)` (was `ceil(F/5)`). ~50% boost at high floors so hero leveling can keep pace with the floor curve.
+
+### Why
+Previous patch (0.4.01) softened enemy scaling, but a second wall remained: even with reasonable enemy HP, hero leveling stalled because each level cost 1.6× the last while credits per floor only grew linearly. Polynomial cost + better credit scaling fixes that.
+
+---
+
+## [0.4.01] — Scaling Rebalance
+
+### Changed
+- **Enemy HP/ATK floor scaling softened** — regular enemies scale at `1.18^floor` HP / `1.15^floor` ATK (was `1.22` / `1.18`). Bosses scale at `1.16^floor` HP / `1.15^floor` ATK (was `1.25` / `1.20`). This was the root cause of mid-game becoming unwinnable: enemy stats were outrunning hero leveling exponentially each floor. Surfaced clearly when 4× speed let players advance faster than they could level.
+- **Boss `hpMult` / `atkMult` rebalanced** — F10 5/1.4, F25 8/1.7, F50 12/2.2, F100 18/3.0, F200 25/4.0 (was 8/1.5, 12/1.8, 20/2.5, 40/3.5, 100/5.0). The F200 Sovereign at the old 100× hpMult was producing HP values past `Number.MAX_SAFE_INTEGER` (~9×10¹⁵), where integer math silently loses precision.
+
+### Fixed
+- F200 Sovereign HP no longer overflows JS safe-integer range; final boss is now actually representable.
+
+---
+
 ## [0.4.00] — Combat Speed Control
 
 ### Added
