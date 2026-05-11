@@ -18,6 +18,14 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.4.03] — Bulk Level-Up
+
+### Added
+- **Bulk LV+ buy modes** on the Squad tab — toggle between **1× / 5× / 10×** to buy multiple hero levels per tap. The per-hero LV+ button quotes the total cost for the selected count and disables if you can't afford the full bundle. Buy mode persists across saves.
+- **MAX ALL button** — spends available credits to level every unlocked hero as much as possible. Round-robin (always picks the cheapest-next-level hero first), which naturally equalizes squad levels rather than dumping everything into one.
+
+---
+
 ## [0.4.02] — Economy Rebalance
 
 ### Changed
