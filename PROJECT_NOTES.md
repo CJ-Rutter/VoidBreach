@@ -21,7 +21,7 @@
 
 ## Current version
 
-**v0.5.00** — defined in the `GAME_VERSION` constant near the top of the `<script>` block. Displayed in the SYS panel.
+**v0.5.01** — defined in the `GAME_VERSION` constant near the top of the `<script>` block. Displayed in the SYS panel.
 
 Versioning convention: `MAJOR.MINOR.PATCH`
 - Patch (0.1.0**1**): bug fixes, balance tweaks, copy changes shipped on their own

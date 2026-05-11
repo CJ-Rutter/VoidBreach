@@ -18,11 +18,18 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.5.01] — Sniper Rename
+
+### Changed
+- Sniper renamed from *Ravn Thal* to **Josh Cook**.
+
+---
+
 ## [0.5.00] — Squad Selection + Sniper
 
 ### Added
 - **Squad-selection UI** — `state.squad` (array of deployed hero IDs, cap 4) drives `getActiveHeroes()`. The Squad tab is partitioned into three sections (**Deployed / Reserves / Available to Hire**) with an Active Squad strip at the top showing filled and empty slots. Each deployed hero has a `↓ BENCH` action; each benched-but-unlocked hero has a `↑ DEPLOY` action. Deploying when the squad is already full opens a swap modal — pick which deployed hero to bench in exchange. Newly hired heroes auto-deploy if a slot is open, otherwise land in reserves.
-- **Hero #5: Ravn Thal — Marksman** 🎯 (unlock 50,000 CR). HP 70 / ATK 60 / SPD 0.4 — highest single-target burst in the squad, slowest cadence. Abilities:
+- **Hero #5: Josh Cook — Marksman** 🎯 (unlock 50,000 CR). HP 70 / ATK 60 / SPD 0.4 — highest single-target burst in the squad, slowest cadence. Abilities:
   - **Marksman's Eye** (Lv5) — first attack of every battle is a guaranteed crit
   - **Armor Pierce** (Lv10) — attacks bypass 50% of enemy shield, hitting HP through shielded bosses
   - **Final Shot** (Lv25) — when any enemy dies, the sniper's next shot deals +100% damage
