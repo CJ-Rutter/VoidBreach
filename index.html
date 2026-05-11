@@ -1398,7 +1398,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.4.03';
+const GAME_VERSION = '0.4.04';
 
 const HERO_CLASSES = [
   {
@@ -1728,7 +1728,8 @@ let combat = {
   isBoss: false,
   bossMechanicTimer: 0,
   lastStandUsed: false,
-  resurrectionUsed: false
+  resurrectionUsed: false,
+  transitioning: false
 };
 
 // Returns true if the named hero is unlocked and has reached the level threshold
@@ -1944,13 +1945,14 @@ function setupCombat() {
     dead: false,
     attackCount: 0
   }));
-  
+
   // Create enemies for current floor
   combat.enemyUnits = generateEnemies(state.floor);
   combat.isBoss = BOSSES.some(b => b.floor === state.floor);
   combat.bossMechanicTimer = 0;
   combat.lastStandUsed = false;
   combat.resurrectionUsed = false;
+  combat.transitioning = false;
 
   renderUnits();
 }
@@ -2020,12 +2022,20 @@ const TICK_MS = 100;
 const TICK_SEC = TICK_MS / 1000;
 
 function combatTick() {
+  // Guard against re-entering the victory/defeat branches during the
+  // setTimeout delay before setupCombat() regenerates units. Without this,
+  // every tick in the 1.2–1.5 s window re-awards rewards and re-mutates the
+  // floor, which at 4× speed catapults the player across dozens of floors per
+  // clear.
+  if (combat.transitioning) return;
+
   // Check win/loss
   const heroesAlive = combat.heroUnits.filter(u => !u.dead);
   const enemiesAlive = combat.enemyUnits.filter(u => !u.dead);
-  
+
   if (heroesAlive.length === 0) {
     // Defeat — rewind one floor (min 1)
+    combat.transitioning = true;
     log('✗ SQUAD DOWN — RETREATING', 'boss');
     setTimeout(() => {
       state.floor = Math.max(1, state.floor - 1);
@@ -2039,6 +2049,7 @@ function combatTick() {
   
   if (enemiesAlive.length === 0) {
     // Victory!
+    combat.transitioning = true;
     let totalCred = 0, totalScrap = 0;
     combat.enemyUnits.forEach(e => {
       totalCred += e.credits;
