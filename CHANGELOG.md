@@ -18,6 +18,14 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.4.04] — Floor-Skip Bug Fix
+
+### Fixed
+- **Critical: floor counter no longer rockets past the player on every clear.** The victory and defeat branches in `combatTick` deferred `setupCombat()` by 1.2 s / 1.5 s via `setTimeout`, but during that delay window the same dead-enemies / dead-heroes state persisted in `combat.enemyUnits` and `combat.heroUnits`. Every tick during the delay (~12 at 1×, ~48 at 4× speed) re-fired the branch — re-awarding credits, re-rolling loot, and incrementing/decrementing `state.floor` once per tick. At 4× speed a fresh-start Marine could land on floor ~50 after clearing floor 1, then get instantly wiped because the enemies for floor 50 actually existed once `setupCombat()` finally ran.
+- Added a `combat.transitioning` guard that's set when either branch fires and cleared in `setupCombat()`. Ticks during the transition window now short-circuit.
+
+---
+
 ## [0.4.03] — Bulk Level-Up
 
 ### Added
