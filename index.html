@@ -400,7 +400,65 @@
     background: rgba(0,255,255,0.3);
     transform: scale(0.97);
   }
-  
+
+  .buy-mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    background: rgba(0,30,50,0.5);
+    border: 1px solid #066;
+    border-radius: 4px;
+  }
+
+  .buy-mode-label {
+    font-size: 0.65em;
+    color: #088;
+    letter-spacing: 1px;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .buy-mode-btn {
+    flex: 0 0 auto;
+    padding: 6px 9px;
+    background: rgba(0,40,60,0.6);
+    border: 1px solid #066;
+    color: #088;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.75em;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .buy-mode-btn.active {
+    background: rgba(0,255,255,0.25);
+    border-color: #0ff;
+    color: #0ff;
+    box-shadow: 0 0 4px rgba(0,255,255,0.4) inset;
+  }
+
+  .buy-mode-btn:not(.active):active {
+    background: rgba(0,255,255,0.15);
+  }
+
+  .buy-mode-btn.max-all-btn {
+    margin-left: auto;
+    background: linear-gradient(135deg, rgba(80,60,0,0.6), rgba(80,30,0,0.6));
+    border-color: #fa0;
+    color: #fc4;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 6px rgba(255,160,0,0.25);
+  }
+
+  .buy-mode-btn.max-all-btn:active {
+    background: rgba(255,160,0,0.3);
+    transform: scale(0.97);
+  }
+
   .hero-card {
     background: rgba(0,20,40,0.6);
     border: 1px solid #0aa;
@@ -1340,7 +1398,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.4.02';
+const GAME_VERSION = '0.4.03';
 
 const HERO_CLASSES = [
   {
@@ -1623,6 +1681,7 @@ let state = {
   maxFloor: 1,
   chapter: 1,
   combatSpeed: 1,
+  buyMode: 1,
   heroes: {
     marine:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: true },
     engineer: { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
@@ -1805,22 +1864,53 @@ function getHeroStats(heroId) {
   };
 }
 
-function getHeroLevelCost(heroId) {
-  const level = state.heroes[heroId].level;
+function getHeroLevelCost(heroId, count = 1) {
   // Polynomial growth (L^2.2) instead of exponential (1.6^L) — keeps high-level
   // leveling tractable so hero scaling can keep pace with floor scaling.
-  const baseCost = 50 * Math.pow(level, 2.2);
+  // `count` lets the UI quote a bulk cost for 5×/10× buy modes.
+  const startLevel = state.heroes[heroId].level;
   const reduction = Math.min(0.75, getSkillBonus('hero_cost_reduce'));
-  return Math.floor(baseCost * (1 - reduction));
+  let total = 0;
+  for (let i = 0; i < count; i++) {
+    total += 50 * Math.pow(startLevel + i, 2.2);
+  }
+  return Math.floor(total * (1 - reduction));
 }
 
-function levelUpHero(heroId) {
-  const cost = getHeroLevelCost(heroId);
+function levelUpHero(heroId, count = 1) {
+  const cost = getHeroLevelCost(heroId, count);
   if (state.credits < cost) return;
   state.credits -= cost;
-  state.heroes[heroId].level++;
+  state.heroes[heroId].level += count;
   setupCombat(); // refresh hero stats in combat
   refreshAffordability();
+}
+
+// Repeatedly level up the cheapest-next-level hero until no further level is
+// affordable. Round-robin behavior naturally equalizes squad levels.
+function maxLevelAllHeroes() {
+  let totalLevels = 0;
+  let totalSpent = 0;
+  // Hard safety cap; polynomial cost makes runaway implausible but cheap to guard.
+  for (let i = 0; i < 100000; i++) {
+    let pickHero = null;
+    let pickCost = Infinity;
+    HERO_CLASSES.forEach(def => {
+      if (!state.heroes[def.id].unlocked) return;
+      const c = getHeroLevelCost(def.id, 1);
+      if (c < pickCost) { pickCost = c; pickHero = def.id; }
+    });
+    if (!pickHero || pickCost > state.credits) break;
+    state.credits -= pickCost;
+    state.heroes[pickHero].level++;
+    totalSpent += pickCost;
+    totalLevels++;
+  }
+  if (totalLevels > 0) {
+    log(`⬆ Mass level-up: +${totalLevels} levels across squad (−${format(totalSpent)} CR)`, 'loot');
+    setupCombat();
+    refreshAffordability();
+  }
 }
 
 function getHeroUnlockCost(heroId) {
@@ -2591,7 +2681,28 @@ function renderSquad() {
   const slotIcons = { weapon: '🔫', armor: '🛡️', module: '💾' };
   const slotLabels = { weapon: 'WPN', armor: 'ARM', module: 'MOD' };
   
-  // Auto-equip button at the top
+  // Buy-mode bar — selects how many levels each LV+ button buys, plus MAX ALL
+  const buyMode = state.buyMode || 1;
+  const buyBar = document.createElement('div');
+  buyBar.className = 'buy-mode-bar';
+  const modeButtons = [1, 5, 10].map(m =>
+    `<button class="buy-mode-btn ${buyMode === m ? 'active' : ''}" data-mode="${m}">${m}×</button>`
+  ).join('');
+  buyBar.innerHTML = `
+    <div class="buy-mode-label">LV+ BUY</div>
+    ${modeButtons}
+    <button class="buy-mode-btn max-all-btn" id="maxAllBtn">⬆ MAX ALL</button>
+  `;
+  list.appendChild(buyBar);
+  buyBar.querySelectorAll('[data-mode]').forEach(btn => {
+    attachTap(btn, () => {
+      state.buyMode = parseInt(btn.dataset.mode, 10);
+      renderSquad();
+    });
+  });
+  attachTap(buyBar.querySelector('#maxAllBtn'), () => maxLevelAllHeroes());
+
+  // Auto-equip button
   const totalGearAvailable = state.inventory.length;
   const autoBar = document.createElement('div');
   autoBar.className = 'auto-equip-bar';
@@ -2615,7 +2726,8 @@ function renderSquad() {
     
     if (save.unlocked) {
       const stats = getHeroStats(def.id);
-      const cost = getHeroLevelCost(def.id);
+      const buyCount = state.buyMode || 1;
+      const cost = getHeroLevelCost(def.id, buyCount);
       const canAfford = state.credits >= cost;
       
       // Build equipment display
@@ -2679,7 +2791,7 @@ function renderSquad() {
             </div>
           </div>
           <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
-            LV+<br>${format(cost)} CR
+            LV+${buyCount}<br>${format(cost)} CR
           </button>
         </div>
         ${abilHtml}
@@ -2687,7 +2799,7 @@ function renderSquad() {
       `;
       
       const btn = div.querySelector('.level-btn');
-      attachTap(btn, () => levelUpHero(def.id));
+      attachTap(btn, () => levelUpHero(def.id, buyCount));
       
       // Wire up the per-slot action buttons
       div.querySelectorAll('.slot-action').forEach(actionBtn => {
@@ -3366,7 +3478,7 @@ function loadGame(silent) {
     
     // Merge with defaults to handle updates
     state = Object.assign({
-      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1,
+      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1, buyMode: 1,
       heroes: {
         marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
         engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
@@ -3479,7 +3591,7 @@ attachTap(document.getElementById('resetBtn'), () => {
     'Erase all progress including heroes, loot, stats, and story. This cannot be undone.',
     () => {
       state = {
-        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1,
+        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1, buyMode: 1,
         heroes: {
           marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
           engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
