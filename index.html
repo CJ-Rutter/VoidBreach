@@ -694,7 +694,139 @@
   .level-btn:not(:disabled):active {
     background: rgba(0,255,255,0.3);
   }
-  
+
+  .level-btn.small {
+    font-size: 0.65em;
+    padding: 5px 6px;
+  }
+
+  /* Active squad strip (visualizes the 4 deployed slots) */
+  .squad-strip-bar {
+    background: rgba(0,40,60,0.6);
+    border: 1px solid #0ff;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 0 8px rgba(0,255,255,0.15);
+  }
+
+  .squad-strip-label {
+    font-size: 0.7em;
+    color: #0aa;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+
+  .squad-strip-slots {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .squad-slot {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 1.6em;
+    border: 1px solid;
+  }
+
+  .squad-slot.filled {
+    background: rgba(0,80,80,0.4);
+    border-color: #0ff;
+    box-shadow: 0 0 6px rgba(0,255,255,0.25), inset 0 0 6px rgba(0,255,255,0.1);
+  }
+
+  .squad-slot.empty {
+    background: rgba(0,0,0,0.4);
+    border-color: #044;
+    color: #066;
+    font-size: 1.2em;
+    border-style: dashed;
+  }
+
+  /* Section headings between Deployed / Reserves / Locked */
+  .squad-section-heading {
+    font-size: 0.7em;
+    color: #088;
+    letter-spacing: 2px;
+    margin: 10px 0 6px 2px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(0,255,255,0.15);
+  }
+
+  .squad-section-heading.collapsible {
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    color: #0aa;
+  }
+
+  .squad-section-heading.collapsible:active {
+    color: #0ff;
+  }
+
+  .squad-section-heading.collapsible .chevron {
+    display: inline-block;
+    width: 1em;
+    color: #0ff;
+  }
+
+  /* Compact card for benched (reserves) heroes */
+  .hero-card.compact {
+    padding: 6px;
+  }
+
+  /* Stacked LV+ / Bench (or Deploy) buttons on the right of the hero header */
+  .hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .bench-btn,
+  .deploy-btn {
+    background: rgba(0,30,60,0.5);
+    border: 1px solid;
+    color: inherit;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.65em;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    touch-action: manipulation;
+    white-space: nowrap;
+  }
+
+  .bench-btn {
+    border-color: #f88;
+    color: #faa;
+  }
+
+  .bench-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .bench-btn:not(:disabled):active {
+    background: rgba(255,136,136,0.25);
+  }
+
+  .deploy-btn {
+    border-color: #0f8;
+    color: #0fa;
+    box-shadow: 0 0 6px rgba(0,255,170,0.2);
+  }
+
+  .deploy-btn:active {
+    background: rgba(0,255,170,0.25);
+  }
+
   /* Loot items */
   .quick-sell {
     display: grid;
@@ -1398,7 +1530,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.4.04';
+const GAME_VERSION = '0.5.00';
 
 const HERO_CLASSES = [
   {
@@ -1469,6 +1601,23 @@ const HERO_CLASSES = [
       { id: 'mindspike',  unlockLevel: 5,  name: 'Mind Spike',     desc: 'Crits deal 3× damage instead of 2×' },
       { id: 'echo',       unlockLevel: 10, name: 'Synaptic Echo',  desc: '15% chance to attack twice per cooldown' },
       { id: 'voidres',    unlockLevel: 25, name: 'Void Resonance', desc: 'Each crit cuts squad attack cooldown by 0.15s' }
+    ]
+  },
+  {
+    id: 'sniper',
+    name: 'Ravn Thal',
+    class: 'Marksman',
+    icon: '🎯',
+    baseHp: 70,
+    baseAtk: 60,
+    baseSpd: 0.4,
+    unlocked: false,
+    unlockCost: 50000,
+    desc: 'Slow, devastating single shots. Specialist alpha damage.',
+    abilities: [
+      { id: 'eye',        unlockLevel: 5,  name: "Marksman's Eye", desc: 'First attack of every battle is a guaranteed crit' },
+      { id: 'pierce',     unlockLevel: 10, name: 'Armor Pierce',   desc: 'Attacks bypass 50% of enemy shield' },
+      { id: 'finalshot',  unlockLevel: 25, name: 'Final Shot',     desc: "When any enemy dies, your next shot deals +100% damage" }
     ]
   }
 ];
@@ -1682,11 +1831,14 @@ let state = {
   chapter: 1,
   combatSpeed: 1,
   buyMode: 1,
+  hireCollapsed: false,
+  squad: ['marine'],
   heroes: {
     marine:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: true },
     engineer: { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
     medic:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
-    psion:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false }
+    psion:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
+    sniper:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false }
   },
   inventory: [],
   storyUnlocked: [1],
@@ -1729,7 +1881,8 @@ let combat = {
   bossMechanicTimer: 0,
   lastStandUsed: false,
   resurrectionUsed: false,
-  transitioning: false
+  transitioning: false,
+  sniperFinalShot: false
 };
 
 // Returns true if the named hero is unlocked and has reached the level threshold
@@ -1755,6 +1908,13 @@ function trackEnemyKill(enemy) {
     state.stats.enemiesKilled++;
     const tname = enemy.type ? enemy.type.name : enemy.name;
     state.stats.enemyKillsByType[tname] = (state.stats.enemyKillsByType[tname] || 0) + 1;
+  }
+  // Final Shot (Sniper L25): arm a bonus on the sniper's next shot whenever any
+  // enemy dies. Fires from regular hits, Frag Grenade, and Counter-Strike alike
+  // since they all funnel through trackEnemyKill.
+  if (hasAbility('sniper', 'finalshot')) {
+    const sniperUnit = combat.heroUnits.find(u => u.id === 'sniper' && !u.dead);
+    if (sniperUnit) combat.sniperFinalShot = true;
   }
 }
 
@@ -1925,14 +2085,67 @@ function unlockHero(heroId) {
   if (state.credits < cost) return;
   state.credits -= cost;
   state.heroes[heroId].unlocked = true;
+  // Auto-deploy the new hero if there's an open squad slot, otherwise they
+  // land in reserves and the player decides who to bench.
+  if (state.squad.length < SQUAD_CAP && !state.squad.includes(heroId)) {
+    state.squad.push(heroId);
+  }
   setupCombat();
   refreshAffordability();
+}
+
+// ============ SQUAD MANAGEMENT ============
+
+const SQUAD_CAP = 4;
+
+// True if the hero is currently deployed (will appear in combat).
+function isDeployed(heroId) {
+  return state.squad.includes(heroId);
+}
+
+// Add an unlocked hero to the active squad. Returns true if deployed,
+// false if the squad is already full (caller should prompt for a swap).
+function deployHero(heroId) {
+  if (!state.heroes[heroId]?.unlocked) return false;
+  if (state.squad.includes(heroId)) return true;
+  if (state.squad.length >= SQUAD_CAP) return false;
+  state.squad.push(heroId);
+  setupCombat();
+  refreshAffordability();
+  return true;
+}
+
+// Remove a hero from the active squad. Won't let the squad drop to zero —
+// without at least one deployed hero combatTick has nothing to operate on.
+function benchHero(heroId) {
+  if (state.squad.length <= 1) return false;
+  const idx = state.squad.indexOf(heroId);
+  if (idx === -1) return false;
+  state.squad.splice(idx, 1);
+  setupCombat();
+  refreshAffordability();
+  return true;
+}
+
+// Atomic swap: bench `outId`, deploy `inId`. Used when squad is full and
+// the player picks a replacement from the bench-prompt modal.
+function swapSquad(outId, inId) {
+  if (!state.heroes[inId]?.unlocked) return false;
+  const idx = state.squad.indexOf(outId);
+  if (idx === -1) return false;
+  if (state.squad.includes(inId)) return false;
+  state.squad[idx] = inId;
+  setupCombat();
+  refreshAffordability();
+  return true;
 }
 
 // ============ COMBAT SETUP ============
 
 function getActiveHeroes() {
-  return HERO_CLASSES.filter(h => state.heroes[h.id].unlocked).map(h => getHeroStats(h.id));
+  return HERO_CLASSES
+    .filter(h => state.heroes[h.id]?.unlocked && state.squad.includes(h.id))
+    .map(h => getHeroStats(h.id));
 }
 
 function setupCombat() {
@@ -1953,6 +2166,7 @@ function setupCombat() {
   combat.lastStandUsed = false;
   combat.resurrectionUsed = false;
   combat.transitioning = false;
+  combat.sniperFinalShot = false;
 
   renderUnits();
 }
@@ -2197,14 +2411,18 @@ function combatTick() {
 }
 
 function doAttack(attacker, defender) {
-  // Frag Grenade (Engineer L5): every 5th attack hits all enemies for 75% damage,
-  // replacing the regular single-target hit. The counter is per-hero-unit.
-  if (attacker.isHero && attacker.id === 'engineer' && hasAbility('engineer', 'frag')) {
+  // Per-unit attack counter for all hero attackers. Drives Frag Grenade's
+  // every-5th trigger and Marksman's Eye's first-of-battle crit.
+  if (attacker.isHero) {
     attacker.attackCount = (attacker.attackCount || 0) + 1;
-    if (attacker.attackCount % 5 === 0) {
-      doFragGrenade(attacker);
-      return;
-    }
+  }
+
+  // Frag Grenade (Engineer L5): every 5th attack hits all enemies for 75% damage,
+  // replacing the regular single-target hit.
+  if (attacker.isHero && attacker.id === 'engineer' && hasAbility('engineer', 'frag')
+      && attacker.attackCount % 5 === 0) {
+    doFragGrenade(attacker);
+    return;
   }
 
   let dmg = attacker.atk;
@@ -2227,12 +2445,25 @@ function doAttack(attacker, defender) {
     dmg = Math.floor(dmg * 1.5);
   }
 
+  // Final Shot (Sniper L25): consume the pending bonus if it was armed by an
+  // enemy death. Doubles the damage of this single shot.
+  if (attacker.isHero && attacker.id === 'sniper' && combat.sniperFinalShot) {
+    combat.sniperFinalShot = false;
+    dmg = Math.floor(dmg * 2);
+    log(`🎯 Sniper's Final Shot!`, 'crit');
+  }
+
   // Hero crits — base crit (psion has natural) + prestige skill crit
   if (attacker.isHero) {
+    // Marksman's Eye (Sniper L5): first attack each battle is a guaranteed crit
+    const forcedCrit = attacker.id === 'sniper'
+      && attacker.attackCount === 1
+      && hasAbility('sniper', 'eye');
+
     const baseCrit = attacker.def.crit || 0;
     const skillCrit = getSkillBonus('crit_chance');
     const totalCrit = baseCrit + skillCrit;
-    if (totalCrit > 0 && Math.random() < totalCrit) {
+    if (forcedCrit || (totalCrit > 0 && Math.random() < totalCrit)) {
       // Mind Spike (Psion L5): crits do 3× instead of 2×
       const critMult = (attacker.id === 'psion' && hasAbility('psion', 'mindspike')) ? 3 : 2;
       dmg *= critMult;
@@ -2270,9 +2501,16 @@ function doAttack(attacker, defender) {
     state.stats.damageTaken += dmg;
   }
 
-  // Apply shield first if boss has one
+  // Apply shield first if boss has one.
+  // Armor Pierce (Sniper L10): half the damage skips the shield entirely and
+  // falls straight through to HP — so sniper meaningfully damages shielded
+  // bosses even while their shield is up.
   if (defender.shield && defender.shield > 0) {
-    const shieldDmg = Math.min(defender.shield, dmg);
+    let shieldPortion = dmg;
+    if (attacker.isHero && attacker.id === 'sniper' && hasAbility('sniper', 'pierce')) {
+      shieldPortion = Math.floor(dmg * 0.5);
+    }
+    const shieldDmg = Math.min(defender.shield, shieldPortion);
     defender.shield -= shieldDmg;
     dmg -= shieldDmg;
     if (defender.shield <= 0 && shieldDmg > 0) {
@@ -2498,13 +2736,17 @@ function scoreItemForHero(item, heroDef) {
 
 function autoEquipBest() {
   // Build a working pool of all available items: inventory + currently equipped
-  // Currently-equipped items go back into the pool so we can reshuffle optimally.
+  // on DEPLOYED heroes only. Benched heroes are insulated — auto-equip never
+  // touches their gear, so the player keeps full control over reserve loadouts.
   const pool = [...state.inventory];
-  
-  // Get unlocked heroes IN ORDER from HERO_CLASSES (which matches squad list display order)
-  const orderedHeroes = HERO_CLASSES.filter(h => state.heroes[h.id].unlocked);
-  
-  // Pull all currently-equipped items back into the pool
+
+  // Deployed heroes IN ORDER from HERO_CLASSES (matches the on-screen order
+  // inside the DEPLOYED section, which defines priority for picks).
+  const orderedHeroes = HERO_CLASSES.filter(
+    h => state.heroes[h.id].unlocked && state.squad.includes(h.id)
+  );
+
+  // Pull all currently-equipped items off deployed heroes and back into the pool
   orderedHeroes.forEach(def => {
     const hero = state.heroes[def.id];
     ['weapon', 'armor', 'module'].forEach(slot => {
@@ -2688,11 +2930,30 @@ function animateAttack(attacker, defender) {
 function renderSquad() {
   const list = document.getElementById('squadList');
   list.innerHTML = '';
-  
+
   const slotIcons = { weapon: '🔫', armor: '🛡️', module: '💾' };
   const slotLabels = { weapon: 'WPN', armor: 'ARM', module: 'MOD' };
-  
-  // Buy-mode bar — selects how many levels each LV+ button buys, plus MAX ALL
+
+  // -- Active Squad strip: shows the 4 deployed slots (empty slots shown as —)
+  const stripBar = document.createElement('div');
+  stripBar.className = 'squad-strip-bar';
+  let stripSlots = '';
+  for (let i = 0; i < SQUAD_CAP; i++) {
+    const heroId = state.squad[i];
+    if (heroId) {
+      const def = HERO_CLASSES.find(h => h.id === heroId);
+      stripSlots += `<div class="squad-slot filled" title="${def.name}">${def.icon}</div>`;
+    } else {
+      stripSlots += `<div class="squad-slot empty">—</div>`;
+    }
+  }
+  stripBar.innerHTML = `
+    <div class="squad-strip-label">▸ ACTIVE SQUAD (${state.squad.length}/${SQUAD_CAP})</div>
+    <div class="squad-strip-slots">${stripSlots}</div>
+  `;
+  list.appendChild(stripBar);
+
+  // -- Buy-mode bar — selects how many levels each LV+ button buys, plus MAX ALL
   const buyMode = state.buyMode || 1;
   const buyBar = document.createElement('div');
   buyBar.className = 'buy-mode-bar';
@@ -2713,141 +2974,258 @@ function renderSquad() {
   });
   attachTap(buyBar.querySelector('#maxAllBtn'), () => maxLevelAllHeroes());
 
-  // Auto-equip button
+  // -- Auto-equip button
   const totalGearAvailable = state.inventory.length;
   const autoBar = document.createElement('div');
   autoBar.className = 'auto-equip-bar';
   autoBar.innerHTML = `
     <div class="auto-equip-info">
-      ${totalGearAvailable} items in inventory • Top-priority hero gets best gear first
+      ${totalGearAvailable} items in inventory • Best gear goes to deployed heroes (benched gear untouched)
     </div>
     <button class="auto-equip-btn" id="autoEquipBtn">✦ EQUIP BEST</button>
   `;
   list.appendChild(autoBar);
   attachTap(autoBar.querySelector('#autoEquipBtn'), () => {
     showModal('AUTO-EQUIP BEST GEAR',
-      'This will redistribute all your equipment (inventory + currently equipped) to your squad. Heroes higher in the list get top picks first.',
+      'Redistributes inventory + currently-equipped gear across your <b>deployed</b> squad. Heroes higher in the list get top picks first. Benched heroes keep their gear and are not affected.',
       () => autoEquipBest());
   });
-  
-  HERO_CLASSES.forEach(def => {
-    const save = state.heroes[def.id];
-    const div = document.createElement('div');
-    div.className = 'hero-card' + (save.unlocked ? '' : ' locked');
-    
-    if (save.unlocked) {
-      const stats = getHeroStats(def.id);
-      const buyCount = state.buyMode || 1;
-      const cost = getHeroLevelCost(def.id, buyCount);
-      const canAfford = state.credits >= cost;
-      
-      // Build equipment display
-      let equipHtml = '<div class="hero-equipment">';
-      ['weapon', 'armor', 'module'].forEach(slot => {
-        const item = save.equipment[slot];
-        if (item) {
-          const rarityName = RARITY_NAMES[item.rarity];
-          const upgLevel = item.upgrades || 0;
-          const upgPlus = upgLevel > 0 ? ` <span style="color:#0f0">+${upgLevel}</span>` : '';
-          const upgCost = getUpgradeCost(item);
-          const maxedUpg = upgLevel >= MAX_UPGRADES;
-          const canUpgrade = !maxedUpg && state.scrap >= upgCost;
-          
-          const upgBtnLabel = maxedUpg ? 'MAX' : `⚙ ${format(upgCost)}`;
-          
-          equipHtml += `<div class="equip-slot rarity-${rarityName}">
-            <span class="equip-slot-icon">${slotIcons[slot]}</span>
-            <span class="equip-slot-name">${item.displayName}${upgPlus}</span>
-            <button class="slot-action upg-action" data-act="upg-equipped" data-hero="${def.id}" data-slot="${slot}" ${canUpgrade ? '' : 'disabled'}>${upgBtnLabel}</button>
-            <button class="slot-action unequip-action" data-act="unequip" data-hero="${def.id}" data-slot="${slot}">✕</button>
-          </div>`;
-        } else {
-          equipHtml += `<div class="equip-slot empty">
-            <span class="equip-slot-icon">${slotIcons[slot]}</span>
-            <span class="equip-slot-name">— ${slotLabels[slot]} empty —</span>
-          </div>`;
-        }
-      });
-      equipHtml += '</div>';
-      
-      // Build abilities display
-      let abilHtml = '';
-      if (def.abilities && def.abilities.length > 0) {
-        abilHtml = '<div class="hero-abilities"><div class="abilities-label">▸ ABILITIES</div>';
-        def.abilities.forEach(ability => {
-          const unlocked = save.level >= ability.unlockLevel;
-          const cls = unlocked ? 'unlocked' : 'locked';
-          const icon = unlocked ? '✓' : '🔒';
-          const lvlBadge = unlocked ? '' : `<span class="ability-level-locked">Lv${ability.unlockLevel}</span>`;
-          abilHtml += `<div class="ability-row ${cls}">
-            <div class="ability-header">
-              <span class="ability-icon">${icon}</span>
-              <span class="ability-name">${ability.name}</span>
-              ${lvlBadge}
-            </div>
-            <div class="ability-desc">${ability.desc}</div>
-          </div>`;
-        });
-        abilHtml += '</div>';
-      }
 
-      div.innerHTML = `
-        <div class="hero-header">
-          <div class="hero-portrait">${def.icon}</div>
-          <div class="hero-info">
-            <div class="name">${def.name}</div>
-            <div class="class">Lv.${save.level} • ${def.class}</div>
-            <div class="stats">
-              HP: ${format(stats.maxHp)} • ATK: ${format(stats.atk)} • SPD: ${stats.spd.toFixed(2)}
-            </div>
-          </div>
-          <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
-            LV+${buyCount}<br>${format(cost)} CR
-          </button>
-        </div>
-        ${abilHtml}
-        ${equipHtml}
-      `;
-      
-      const btn = div.querySelector('.level-btn');
-      attachTap(btn, () => levelUpHero(def.id, buyCount));
-      
-      // Wire up the per-slot action buttons
-      div.querySelectorAll('.slot-action').forEach(actionBtn => {
-        attachTap(actionBtn, (e) => {
-          e.stopPropagation && e.stopPropagation();
-          const act = actionBtn.dataset.act;
-          const heroId = actionBtn.dataset.hero;
-          const slot = actionBtn.dataset.slot;
-          if (act === 'unequip') {
-            unequipItem(heroId, slot);
-          } else if (act === 'upg-equipped') {
-            if (actionBtn.disabled) return;
-            upgradeEquippedItem(heroId, slot);
-          }
-        });
-      });
-    } else {
-      const unlockCost = getHeroUnlockCost(def.id);
-      const canAfford = state.credits >= unlockCost;
-      div.innerHTML = `
-        <div class="hero-header">
-          <div class="hero-portrait">${def.icon}</div>
-          <div class="hero-info">
-            <div class="name">${def.name}</div>
-            <div class="class">🔒 ${def.class}</div>
-            <div class="stats">${def.desc}</div>
-          </div>
-          <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
-            HIRE<br>${format(unlockCost)} CR
-          </button>
-        </div>
-      `;
-      const btn = div.querySelector('.level-btn');
-      attachTap(btn, () => unlockHero(def.id));
+  // Partition heroes into the three sections
+  const deployedDefs = HERO_CLASSES.filter(h => state.heroes[h.id].unlocked && state.squad.includes(h.id));
+  const reserveDefs  = HERO_CLASSES.filter(h => state.heroes[h.id].unlocked && !state.squad.includes(h.id));
+  const lockedDefs   = HERO_CLASSES.filter(h => !state.heroes[h.id].unlocked);
+
+  const heading = (label) => {
+    const h = document.createElement('div');
+    h.className = 'squad-section-heading';
+    h.textContent = label;
+    return h;
+  };
+
+  // -- Deployed: full card with abilities + equipment, plus a Bench button
+  if (deployedDefs.length > 0) {
+    list.appendChild(heading('▸ DEPLOYED'));
+    deployedDefs.forEach(def => list.appendChild(buildDeployedCard(def, slotIcons, slotLabels)));
+  }
+
+  // -- Reserves: compact card with LV+ and a Deploy button
+  if (reserveDefs.length > 0) {
+    list.appendChild(heading('▸ RESERVES'));
+    reserveDefs.forEach(def => list.appendChild(buildReserveCard(def)));
+  }
+
+  // -- Locked: existing HIRE flow. The heading is a tap-target that collapses
+  // this section so the player can hide noise when they're not ready to spend.
+  if (lockedDefs.length > 0) {
+    const collapsed = !!state.hireCollapsed;
+    const chevron = collapsed ? '▸' : '▾';
+    const h = document.createElement('div');
+    h.className = 'squad-section-heading collapsible';
+    h.innerHTML = `<span class="chevron">${chevron}</span> AVAILABLE TO HIRE (${lockedDefs.length})`;
+    attachTap(h, () => {
+      state.hireCollapsed = !state.hireCollapsed;
+      renderSquad();
+    });
+    list.appendChild(h);
+    if (!collapsed) {
+      lockedDefs.forEach(def => list.appendChild(buildLockedCard(def)));
     }
-    
-    list.appendChild(div);
+  }
+}
+
+// Full hero card for deployed heroes — same content as before (header / abilities / equipment),
+// but with a small ↓ BENCH action wired alongside LV+.
+function buildDeployedCard(def, slotIcons, slotLabels) {
+  const save = state.heroes[def.id];
+  const stats = getHeroStats(def.id);
+  const buyCount = state.buyMode || 1;
+  const cost = getHeroLevelCost(def.id, buyCount);
+  const canAfford = state.credits >= cost;
+  const canBench = state.squad.length > 1; // can't bench the last hero
+
+  // Equipment slots
+  let equipHtml = '<div class="hero-equipment">';
+  ['weapon', 'armor', 'module'].forEach(slot => {
+    const item = save.equipment[slot];
+    if (item) {
+      const rarityName = RARITY_NAMES[item.rarity];
+      const upgLevel = item.upgrades || 0;
+      const upgPlus = upgLevel > 0 ? ` <span style="color:#0f0">+${upgLevel}</span>` : '';
+      const upgCost = getUpgradeCost(item);
+      const maxedUpg = upgLevel >= MAX_UPGRADES;
+      const canUpgrade = !maxedUpg && state.scrap >= upgCost;
+      const upgBtnLabel = maxedUpg ? 'MAX' : `⚙ ${format(upgCost)}`;
+      equipHtml += `<div class="equip-slot rarity-${rarityName}">
+        <span class="equip-slot-icon">${slotIcons[slot]}</span>
+        <span class="equip-slot-name">${item.displayName}${upgPlus}</span>
+        <button class="slot-action upg-action" data-act="upg-equipped" data-hero="${def.id}" data-slot="${slot}" ${canUpgrade ? '' : 'disabled'}>${upgBtnLabel}</button>
+        <button class="slot-action unequip-action" data-act="unequip" data-hero="${def.id}" data-slot="${slot}">✕</button>
+      </div>`;
+    } else {
+      equipHtml += `<div class="equip-slot empty">
+        <span class="equip-slot-icon">${slotIcons[slot]}</span>
+        <span class="equip-slot-name">— ${slotLabels[slot]} empty —</span>
+      </div>`;
+    }
+  });
+  equipHtml += '</div>';
+
+  // Abilities
+  let abilHtml = '';
+  if (def.abilities && def.abilities.length > 0) {
+    abilHtml = '<div class="hero-abilities"><div class="abilities-label">▸ ABILITIES</div>';
+    def.abilities.forEach(ability => {
+      const unlocked = save.level >= ability.unlockLevel;
+      const cls = unlocked ? 'unlocked' : 'locked';
+      const icon = unlocked ? '✓' : '🔒';
+      const lvlBadge = unlocked ? '' : `<span class="ability-level-locked">Lv${ability.unlockLevel}</span>`;
+      abilHtml += `<div class="ability-row ${cls}">
+        <div class="ability-header">
+          <span class="ability-icon">${icon}</span>
+          <span class="ability-name">${ability.name}</span>
+          ${lvlBadge}
+        </div>
+        <div class="ability-desc">${ability.desc}</div>
+      </div>`;
+    });
+    abilHtml += '</div>';
+  }
+
+  const div = document.createElement('div');
+  div.className = 'hero-card';
+  div.innerHTML = `
+    <div class="hero-header">
+      <div class="hero-portrait">${def.icon}</div>
+      <div class="hero-info">
+        <div class="name">${def.name}</div>
+        <div class="class">Lv.${save.level} • ${def.class}</div>
+        <div class="stats">
+          HP: ${format(stats.maxHp)} • ATK: ${format(stats.atk)} • SPD: ${stats.spd.toFixed(2)}
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
+          LV+${buyCount}<br>${format(cost)} CR
+        </button>
+        <button class="bench-btn" ${canBench ? '' : 'disabled'} data-hero="${def.id}" title="Bench this hero">↓ BENCH</button>
+      </div>
+    </div>
+    ${abilHtml}
+    ${equipHtml}
+  `;
+
+  attachTap(div.querySelector('.level-btn'), () => levelUpHero(def.id, buyCount));
+  const benchBtn = div.querySelector('.bench-btn');
+  attachTap(benchBtn, () => {
+    if (benchBtn.disabled) return;
+    benchHero(def.id);
+  });
+  div.querySelectorAll('.slot-action').forEach(actionBtn => {
+    attachTap(actionBtn, (e) => {
+      e.stopPropagation && e.stopPropagation();
+      const act = actionBtn.dataset.act;
+      const heroId = actionBtn.dataset.hero;
+      const slot = actionBtn.dataset.slot;
+      if (act === 'unequip') unequipItem(heroId, slot);
+      else if (act === 'upg-equipped' && !actionBtn.disabled) upgradeEquippedItem(heroId, slot);
+    });
+  });
+  return div;
+}
+
+// Compact hero card for benched but unlocked heroes — no equipment / abilities,
+// LV+ stays available so you can level a benched hero before fielding them.
+function buildReserveCard(def) {
+  const save = state.heroes[def.id];
+  const stats = getHeroStats(def.id);
+  const buyCount = state.buyMode || 1;
+  const cost = getHeroLevelCost(def.id, buyCount);
+  const canAfford = state.credits >= cost;
+
+  const div = document.createElement('div');
+  div.className = 'hero-card compact';
+  div.innerHTML = `
+    <div class="hero-header">
+      <div class="hero-portrait">${def.icon}</div>
+      <div class="hero-info">
+        <div class="name">${def.name}</div>
+        <div class="class">Lv.${save.level} • ${def.class}</div>
+        <div class="stats">
+          HP: ${format(stats.maxHp)} • ATK: ${format(stats.atk)} • SPD: ${stats.spd.toFixed(2)}
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="level-btn small" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
+          LV+${buyCount}<br>${format(cost)} CR
+        </button>
+        <button class="deploy-btn" data-hero="${def.id}">↑ DEPLOY</button>
+      </div>
+    </div>
+  `;
+  attachTap(div.querySelector('.level-btn'), () => levelUpHero(def.id, buyCount));
+  attachTap(div.querySelector('.deploy-btn'), () => requestDeploy(def.id));
+  return div;
+}
+
+// Existing HIRE card for locked heroes (same behavior as pre-v0.5).
+function buildLockedCard(def) {
+  const unlockCost = getHeroUnlockCost(def.id);
+  const canAfford = state.credits >= unlockCost;
+  const div = document.createElement('div');
+  div.className = 'hero-card locked';
+  div.innerHTML = `
+    <div class="hero-header">
+      <div class="hero-portrait">${def.icon}</div>
+      <div class="hero-info">
+        <div class="name">${def.name}</div>
+        <div class="class">🔒 ${def.class}</div>
+        <div class="stats">${def.desc}</div>
+      </div>
+      <button class="level-btn" ${canAfford ? '' : 'disabled'} data-hero="${def.id}">
+        HIRE<br>${format(unlockCost)} CR
+      </button>
+    </div>
+  `;
+  attachTap(div.querySelector('.level-btn'), () => unlockHero(def.id));
+  return div;
+}
+
+// User tapped DEPLOY on a reserve hero. If a slot is open we just deploy;
+// otherwise prompt them to pick which deployed hero to swap out.
+function requestDeploy(heroId) {
+  if (deployHero(heroId)) return; // succeeded — slot was open
+  showSwapDialog(heroId);
+}
+
+// Modal that lists each currently-deployed hero as a button. Tapping one
+// swaps them out for the incoming hero.
+function showSwapDialog(incomingId) {
+  const inDef = HERO_CLASSES.find(h => h.id === incomingId);
+  if (!inDef) return;
+
+  let content = `<p>Squad is full — pick a hero to bench so <b>${inDef.icon} ${inDef.name}</b> can deploy:</p>`;
+  content += '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">';
+  state.squad.forEach(id => {
+    const def = HERO_CLASSES.find(h => h.id === id);
+    if (!def) return;
+    const level = state.heroes[id].level;
+    content += `<button class="modal-btn" data-swapout="${id}" style="flex:0;">${def.icon} ${def.name} <span style="opacity:0.6;">Lv.${level}</span></button>`;
+  });
+  content += '</div>';
+
+  document.getElementById('modalTitle').textContent = '↑ DEPLOY ' + inDef.name.toUpperCase();
+  document.getElementById('modalText').innerHTML = content;
+  document.getElementById('modalTextarea').style.display = 'none';
+  document.getElementById('modal').classList.add('show');
+  document.querySelector('.modal-buttons').style.display = 'none';
+
+  document.querySelectorAll('[data-swapout]').forEach(btn => {
+    attachTap(btn, () => {
+      swapSquad(btn.dataset.swapout, incomingId);
+      document.getElementById('modal').classList.remove('show');
+      document.querySelector('.modal-buttons').style.display = 'flex';
+    });
   });
 }
 
@@ -3489,16 +3867,32 @@ function loadGame(silent) {
     
     // Merge with defaults to handle updates
     state = Object.assign({
-      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1, buyMode: 1,
+      credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1, buyMode: 1, hireCollapsed: false,
+      squad: ['marine'],
       heroes: {
         marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
         engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
         medic: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
-        psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
+        psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+        sniper: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
       },
       inventory: [], storyUnlocked: [1], nextItemId: 1,
       prestige: { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} }
     }, data.state);
+
+    // Migration: pre-v0.5 saves don't have state.squad. Auto-populate with all
+    // currently-unlocked heroes (up to 4) so existing players see no behavior
+    // change on first load. Also backfill heroes.sniper if missing (older saves).
+    if (!state.heroes.sniper) {
+      state.heroes.sniper = { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false };
+    }
+    if (!state.squad || !Array.isArray(state.squad) || state.squad.length === 0) {
+      state.squad = HERO_CLASSES
+        .filter(h => state.heroes[h.id] && state.heroes[h.id].unlocked)
+        .slice(0, 4)
+        .map(h => h.id);
+      if (state.squad.length === 0) state.squad = ['marine']; // ultimate fallback
+    }
     
     // Offline progress — award some credits based on time away
     const elapsedSec = Math.min(8*3600, (Date.now() - data.timestamp) / 1000);
@@ -3602,12 +3996,14 @@ attachTap(document.getElementById('resetBtn'), () => {
     'Erase all progress including heroes, loot, stats, and story. This cannot be undone.',
     () => {
       state = {
-        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1, buyMode: 1,
+        credits: 0, scrap: 0, floor: 1, maxFloor: 1, chapter: 1, combatSpeed: 1, buyMode: 1, hireCollapsed: false,
+        squad: ['marine'],
         heroes: {
           marine: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: true },
           engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
           medic: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
-          psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
+          psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+          sniper: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
         },
         inventory: [], storyUnlocked: [1], nextItemId: 1,
         prestige: { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} }

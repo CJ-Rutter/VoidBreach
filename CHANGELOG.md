@@ -11,10 +11,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and thi
 Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the full roadmap.
 
 ### Likely next
-- Squad-selection UI (pick 4 of N unlocked heroes) — prerequisite for expanding the roster past 4
-- 3 new heroes (Sniper / Tank / Summoner)
-- Power skill branch (boss damage, 5th hero unlock)
+- **Tank** (hero #6) + enemy aggro/taunt targeting (v0.6.00)
+- **Summoner** (hero #7) + drone unit system (v0.7.00)
+- Power skill branch (boss damage)
 - Sound effects
+
+---
+
+## [0.5.00] — Squad Selection + Sniper
+
+### Added
+- **Squad-selection UI** — `state.squad` (array of deployed hero IDs, cap 4) drives `getActiveHeroes()`. The Squad tab is partitioned into three sections (**Deployed / Reserves / Available to Hire**) with an Active Squad strip at the top showing filled and empty slots. Each deployed hero has a `↓ BENCH` action; each benched-but-unlocked hero has a `↑ DEPLOY` action. Deploying when the squad is already full opens a swap modal — pick which deployed hero to bench in exchange. Newly hired heroes auto-deploy if a slot is open, otherwise land in reserves.
+- **Hero #5: Ravn Thal — Marksman** 🎯 (unlock 50,000 CR). HP 70 / ATK 60 / SPD 0.4 — highest single-target burst in the squad, slowest cadence. Abilities:
+  - **Marksman's Eye** (Lv5) — first attack of every battle is a guaranteed crit
+  - **Armor Pierce** (Lv10) — attacks bypass 50% of enemy shield, hitting HP through shielded bosses
+  - **Final Shot** (Lv25) — when any enemy dies, the sniper's next shot deals +100% damage
+
+### Changed
+- **Auto-equip is now deployed-only.** `✦ EQUIP BEST` redistributes inventory + currently-equipped gear across deployed heroes only; benched heroes keep their gear and are not affected.
+- **Squad-tab Available-to-Hire section is collapsible** — tap the heading to hide/show the hireable hero list (state persists across saves). Reduces visual noise when you're not ready to spend.
+
+### Migration
+- Pre-v0.5 saves auto-populate `state.squad` with all currently-unlocked heroes (capped at 4) so existing players see no behavior change on load. Missing `state.heroes.sniper` is backfilled to the default locked entry.
 
 ---
 
