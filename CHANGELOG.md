@@ -18,6 +18,13 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.6.01] — Hidden DEV Panel
+
+### Added
+- **Hidden DEV panel** in the SYS tab for testing — revealed by tapping the version number 7 times within 2 seconds. Session-only (reload hides it again). Actions: credit grants (10k / 100k / 1M), scrap grants (1k / 10k / 100k), shard grants (10 / 50), unlock-all heroes (auto-deploys into open slots), Lv25-all unlocked heroes, floor jumps (+1 / +10 / +50), spawn legendary loot (×1 / ×5). Lifetime credit/scrap stats are intentionally not touched by grants so they stay honest.
+
+---
+
 ## [0.6.00] — Tank + Aggro Targeting
 
 ### Added

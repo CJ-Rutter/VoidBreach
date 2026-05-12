@@ -1313,8 +1313,64 @@
   .version-num {
     color: #0ff;
     font-weight: bold;
+    cursor: pointer; /* version number is the 7-tap reveal target for DEV panel */
   }
-  
+
+  /* Hidden DEV panel — orange/red palette so it can't be mistaken for normal UI */
+  .dev-panel {
+    border-color: #f80;
+    box-shadow: 0 0 10px rgba(255,136,0,0.3), inset 0 0 8px rgba(255,136,0,0.08);
+  }
+
+  .dev-panel .panel-title {
+    color: #fa0;
+    border-bottom-color: rgba(255,170,0,0.4);
+  }
+
+  .dev-section {
+    margin-bottom: 10px;
+  }
+
+  .dev-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .dev-label {
+    font-size: 0.6em;
+    color: #fa0;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+
+  .dev-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .dev-row.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dev-btn {
+    background: rgba(60,30,0,0.5);
+    border: 1px solid #f80;
+    color: #fa0;
+    padding: 8px 4px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.7em;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+    letter-spacing: 0.5px;
+  }
+
+  .dev-btn:active {
+    background: rgba(255,170,0,0.3);
+    transform: scale(0.97);
+  }
+
   /* Modal */
   .modal-bg {
     position: fixed;
@@ -1512,6 +1568,54 @@
         <span class="version-num" id="versionNum">v0.1.00</span>
       </div>
     </div>
+    <div class="panel dev-panel" id="devPanel" style="display:none;">
+      <div class="panel-title">🛠 DEV TOOLS</div>
+      <div class="dev-section">
+        <div class="dev-label">▸ CREDITS</div>
+        <div class="dev-row">
+          <button class="dev-btn" data-dev="cred10k">+10k CR</button>
+          <button class="dev-btn" data-dev="cred100k">+100k CR</button>
+          <button class="dev-btn" data-dev="cred1m">+1M CR</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <div class="dev-label">▸ SCRAP</div>
+        <div class="dev-row">
+          <button class="dev-btn" data-dev="scrap1k">+1k ⚙</button>
+          <button class="dev-btn" data-dev="scrap10k">+10k ⚙</button>
+          <button class="dev-btn" data-dev="scrap100k">+100k ⚙</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <div class="dev-label">▸ VOID SHARDS</div>
+        <div class="dev-row cols-2">
+          <button class="dev-btn" data-dev="shard10">+10 💠</button>
+          <button class="dev-btn" data-dev="shard50">+50 💠</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <div class="dev-label">▸ SQUAD</div>
+        <div class="dev-row cols-2">
+          <button class="dev-btn" data-dev="unlockAll">UNLOCK ALL HEROES</button>
+          <button class="dev-btn" data-dev="levelAll25">LV25 ALL HEROES</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <div class="dev-label">▸ PROGRESSION</div>
+        <div class="dev-row">
+          <button class="dev-btn" data-dev="floor1">+1 FLOOR</button>
+          <button class="dev-btn" data-dev="floor10">+10 FLOORS</button>
+          <button class="dev-btn" data-dev="floor50">+50 FLOORS</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <div class="dev-label">▸ LOOT</div>
+        <div class="dev-row cols-2">
+          <button class="dev-btn" data-dev="legendary">SPAWN LEGENDARY</button>
+          <button class="dev-btn" data-dev="legendary5">SPAWN ×5</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1530,7 +1634,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.6.00';
+const GAME_VERSION = '0.6.01';
 
 const HERO_CLASSES = [
   {
@@ -4043,6 +4147,108 @@ attachTap(document.getElementById('reloadBtn'), () => {
 
 // Display version in SYS panel
 document.getElementById('versionNum').textContent = 'v' + GAME_VERSION;
+
+// ============ DEV PANEL (hidden) ============
+// Reveal: tap the version number 7 times within 2 seconds. Session-only —
+// reloading the page hides the panel again, but state mutations made via
+// dev actions persist as normal saves.
+
+let _devTaps = 0;
+let _devTapTimer = null;
+let _devUnlocked = false;
+
+attachTap(document.getElementById('versionNum'), () => {
+  if (_devUnlocked) return;
+  _devTaps++;
+  clearTimeout(_devTapTimer);
+  _devTapTimer = setTimeout(() => { _devTaps = 0; }, 2000);
+  if (_devTaps >= 7) {
+    _devUnlocked = true;
+    document.getElementById('devPanel').style.display = 'block';
+    log('🛠 DEV PANEL UNLOCKED', 'crit');
+    showStatus('🛠 DEV mode on', 'success');
+  }
+});
+
+function devSpawnLegendary() {
+  const item = generateLoot(state.floor, 'legendary');
+  state.inventory.push(item);
+  state.stats.itemsFound++;
+  const rk = RARITY_NAMES[item.rarity];
+  state.stats.rarityCounts[rk] = (state.stats.rarityCounts[rk] || 0) + 1;
+  return item;
+}
+
+function devAction(action) {
+  switch (action) {
+    case 'cred10k':   state.credits += 10000;   break;
+    case 'cred100k':  state.credits += 100000;  break;
+    case 'cred1m':    state.credits += 1000000; break;
+    case 'scrap1k':   state.scrap += 1000;      break;
+    case 'scrap10k':  state.scrap += 10000;     break;
+    case 'scrap100k': state.scrap += 100000;    break;
+    case 'shard10':
+      state.prestige.shards += 10;
+      state.prestige.totalShardsEarned += 10;
+      break;
+    case 'shard50':
+      state.prestige.shards += 50;
+      state.prestige.totalShardsEarned += 50;
+      break;
+    case 'unlockAll':
+      HERO_CLASSES.forEach(def => {
+        if (!state.heroes[def.id].unlocked) {
+          state.heroes[def.id].unlocked = true;
+          if (state.squad.length < SQUAD_CAP && !state.squad.includes(def.id)) {
+            state.squad.push(def.id);
+          }
+        }
+      });
+      setupCombat();
+      log('🛠 All heroes unlocked', 'loot');
+      break;
+    case 'levelAll25':
+      HERO_CLASSES.forEach(def => {
+        if (state.heroes[def.id].unlocked && state.heroes[def.id].level < 25) {
+          state.heroes[def.id].level = 25;
+        }
+      });
+      setupCombat();
+      log('🛠 Unlocked heroes set to Lv25', 'loot');
+      break;
+    case 'floor1':
+    case 'floor10':
+    case 'floor50': {
+      const jump = action === 'floor1' ? 1 : action === 'floor10' ? 10 : 50;
+      state.floor += jump;
+      state.maxFloor = Math.max(state.maxFloor, state.floor);
+      updateChapter();
+      setupCombat();
+      renderChapter();
+      log(`🛠 Jumped ${jump} floors → F${state.floor}`, 'chapter');
+      break;
+    }
+    case 'legendary': {
+      const item = devSpawnLegendary();
+      log(`🛠 Spawned: ${item.displayName}`, 'loot');
+      break;
+    }
+    case 'legendary5':
+      for (let i = 0; i < 5; i++) devSpawnLegendary();
+      log(`🛠 Spawned 5 legendaries`, 'loot');
+      break;
+  }
+  refreshAffordability();
+  // Re-render any visible side tabs that depend on what we just mutated
+  if (document.getElementById('tab-loot')?.classList.contains('active')) renderLoot();
+  if (document.getElementById('tab-prestige')?.classList.contains('active')) renderPrestige();
+  if (document.getElementById('tab-stats')?.classList.contains('active')) renderStats();
+  saveGame(true);
+}
+
+document.querySelectorAll('#devPanel [data-dev]').forEach(btn => {
+  attachTap(btn, () => devAction(btn.dataset.dev));
+});
 
 attachTap(document.getElementById('resetBtn'), () => {
   showModal('⚠ RESET ALL DATA', 
