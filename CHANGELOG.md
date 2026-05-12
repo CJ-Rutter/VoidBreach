@@ -11,10 +11,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and thi
 Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the full roadmap.
 
 ### Likely next
-- **Tank** (hero #6) + enemy aggro/taunt targeting (v0.6.00)
 - **Summoner** (hero #7) + drone unit system (v0.7.00)
+- Skip-floor button for floors cleared 5+ times (death-loop relief)
 - Power skill branch (boss damage)
 - Sound effects
+
+---
+
+## [0.6.00] — Tank + Aggro Targeting
+
+### Added
+- **Hero #6: Big Thicc — Vanguard** 🛡️ (unlock 150,000 CR). HP 250 / ATK 10 / SPD 0.7 — heaviest frontliner in the squad, lowest DPS by design.
+  - **Baseline: Taunt** — enemies prioritize the Tank when alive. Same pattern as Medic's baseline heal and Psion's baseline crit — built into the class from L1 rather than ability-gated, so the Tank actually plays as a Tank the moment you hire one.
+  - **Reinforced Plating** (Lv5) — additional -20% damage taken (stacks with Marine Bulwark and the Reactive Plating prestige skill)
+  - **Last Bastion** (Lv10) — Tank regenerates 3% max HP/second while below 25% HP. Independent of the Regeneration Field prestige skill.
+  - **Aegis Field** (Lv25) — passive squad-wide -10% damage taken while Tank is alive. The team-comp payoff that rewards keeping Tank standing.
+
+### Changed
+- **Enemy targeting** — new `pickEnemyTarget()` helper picks a taunting hero first, falling back to the normal "first alive" target. Written generically so future taunt-providing classes/abilities slot in without further changes.
+- **Hero renames** — *Voss-7* → **Maz x8** (Psion), *Sera Bellis* → **Para Medic** (Medic). README hero list updated to match.
+
+### Migration
+- Pre-v0.6 saves get a backfilled `state.heroes.tank` (default locked entry); existing squad/equipment/abilities untouched.
 
 ---
 

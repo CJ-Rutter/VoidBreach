@@ -1530,7 +1530,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.5.01';
+const GAME_VERSION = '0.6.00';
 
 const HERO_CLASSES = [
   {
@@ -1569,7 +1569,7 @@ const HERO_CLASSES = [
   },
   {
     id: 'medic',
-    name: 'Sera Bellis',
+    name: 'Para Medic',
     class: 'Field Medic',
     icon: '💊',
     baseHp: 100,
@@ -1587,7 +1587,7 @@ const HERO_CLASSES = [
   },
   {
     id: 'psion',
-    name: 'Voss-7',
+    name: 'Maz x8',
     class: 'Psionic Operative',
     icon: '🔮',
     baseHp: 90,
@@ -1618,6 +1618,24 @@ const HERO_CLASSES = [
       { id: 'eye',        unlockLevel: 5,  name: "Marksman's Eye", desc: 'First attack of every battle is a guaranteed crit' },
       { id: 'pierce',     unlockLevel: 10, name: 'Armor Pierce',   desc: 'Attacks bypass 50% of enemy shield' },
       { id: 'finalshot',  unlockLevel: 25, name: 'Final Shot',     desc: "When any enemy dies, your next shot deals +100% damage" }
+    ]
+  },
+  {
+    id: 'tank',
+    name: 'Big Thicc',
+    class: 'Vanguard',
+    icon: '🛡️',
+    baseHp: 250,
+    baseAtk: 10,
+    baseSpd: 0.7,
+    taunt: true, // baseline: enemies prioritize this hero when alive
+    unlocked: false,
+    unlockCost: 150000,
+    desc: 'Heavy frontliner. Soaks enemy attacks so the squad survives.',
+    abilities: [
+      { id: 'plating',  unlockLevel: 5,  name: 'Reinforced Plating', desc: 'Additional -20% damage taken' },
+      { id: 'bastion',  unlockLevel: 10, name: 'Last Bastion',       desc: 'Regenerates 3% max HP per second while below 25% HP' },
+      { id: 'aegis',    unlockLevel: 25, name: 'Aegis Field',        desc: 'Squad takes -10% damage while Tank is alive' }
     ]
   }
 ];
@@ -1838,7 +1856,8 @@ let state = {
     engineer: { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
     medic:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
     psion:    { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
-    sniper:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false }
+    sniper:   { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false },
+    tank:     { level: 1, equipment: { weapon: null, armor: null, module: null }, unlocked: false }
   },
   inventory: [],
   storyUnlocked: [1],
@@ -2377,6 +2396,17 @@ function combatTick() {
     });
   }
 
+  // Last Bastion (Tank L10): Tank regenerates 3% max HP/sec while below 25% HP.
+  // Independent of the prestige regen above — kicks in even without that skill.
+  if (hasAbility('tank', 'bastion')) {
+    combat.heroUnits.forEach(hero => {
+      if (hero.dead || hero.id !== 'tank') return;
+      if (hero.hp >= hero.maxHp) return;
+      if (hero.hp / hero.maxHp >= 0.25) return;
+      hero.hp = Math.min(hero.maxHp, hero.hp + hero.maxHp * 0.03 * TICK_SEC);
+    });
+  }
+
   // Hero attacks
   combat.heroUnits.forEach(hero => {
     if (hero.dead) return;
@@ -2398,16 +2428,24 @@ function combatTick() {
     }
   });
   
-  // Enemy attacks
+  // Enemy attacks — taunters draw aggro first (Tank's baseline mechanic)
   combat.enemyUnits.forEach(enemy => {
     if (enemy.dead) return;
     enemy.atkCooldown -= TICK_SEC;
     if (enemy.atkCooldown <= 0) {
       enemy.atkCooldown = 1 / enemy.spd;
-      const target = combat.heroUnits.find(u => !u.dead);
+      const target = pickEnemyTarget();
       if (target) doAttack(enemy, target);
     }
   });
+}
+
+// Enemy targeting helper. Heroes whose class definition has taunt:true get
+// priority — currently only the Tank, but written generically so future
+// taunt-providing classes/abilities slot in without changing combatTick.
+function pickEnemyTarget() {
+  const taunter = combat.heroUnits.find(u => !u.dead && u.def && u.def.taunt);
+  return taunter || combat.heroUnits.find(u => !u.dead);
 }
 
 function doAttack(attacker, defender) {
@@ -2485,6 +2523,17 @@ function doAttack(attacker, defender) {
   if (defender.isHero) {
     const reduction = Math.min(0.75, getSkillBonus('dmg_reduce'));
     if (reduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - reduction)));
+
+    // Aegis Field (Tank L25): squad-wide -10% damage taken while Tank is alive
+    if (hasAbility('tank', 'aegis')) {
+      const tankAlive = combat.heroUnits.some(u => u.id === 'tank' && !u.dead);
+      if (tankAlive) dmg = Math.max(1, Math.floor(dmg * 0.9));
+    }
+
+    // Reinforced Plating (Tank L5): additional -20% damage taken when Tank is the defender
+    if (defender.id === 'tank' && hasAbility('tank', 'plating')) {
+      dmg = Math.max(1, Math.floor(dmg * 0.8));
+    }
 
     // Bulwark (Marine L5): additional -10% damage taken
     if (defender.id === 'marine' && hasAbility('marine', 'bulwark')) {
@@ -3874,7 +3923,8 @@ function loadGame(silent) {
         engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
         medic: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
         psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
-        sniper: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
+        sniper: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+        tank: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
       },
       inventory: [], storyUnlocked: [1], nextItemId: 1,
       prestige: { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} }
@@ -3882,9 +3932,12 @@ function loadGame(silent) {
 
     // Migration: pre-v0.5 saves don't have state.squad. Auto-populate with all
     // currently-unlocked heroes (up to 4) so existing players see no behavior
-    // change on first load. Also backfill heroes.sniper if missing (older saves).
+    // change on first load. Also backfill heroes.sniper / heroes.tank if missing.
     if (!state.heroes.sniper) {
       state.heroes.sniper = { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false };
+    }
+    if (!state.heroes.tank) {
+      state.heroes.tank = { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false };
     }
     if (!state.squad || !Array.isArray(state.squad) || state.squad.length === 0) {
       state.squad = HERO_CLASSES
@@ -4003,7 +4056,8 @@ attachTap(document.getElementById('resetBtn'), () => {
           engineer: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
           medic: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
           psion: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
-          sniper: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
+          sniper: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false },
+          tank: { level: 1, equipment: {weapon:null,armor:null,module:null}, unlocked: false }
         },
         inventory: [], storyUnlocked: [1], nextItemId: 1,
         prestige: { shards: 0, totalShardsEarned: 0, runs: 0, skills: {} }

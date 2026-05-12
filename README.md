@@ -21,8 +21,8 @@ The game is mobile-first — works great on a phone in portrait mode.
 - **🪖 4 unlockable heroes**, each with distinct combat roles
   - Kess Vance, Assault Marine — balanced fighter
   - Dr. Nyx Oram, Engineer — glass-cannon DPS
-  - Sera Bellis, Field Medic — heals allies on each shot
-  - Voss-7, Psion — high crit chance for double damage
+  - Para Medic, Field Medic — heals allies on each shot
+  - Maz x8, Psion — high crit chance for double damage
 - **🎁 Five-tier loot system** — Common → Uncommon → Rare → Epic → Legendary, with weapons, armor, and tech modules
 - **⚙ Item upgrades** — spend scrap to upgrade gear up to +10, +20% stats per level
 - **👹 Boss fights** every 25-50 floors with unique mechanics
