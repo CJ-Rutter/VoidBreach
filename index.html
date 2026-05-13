@@ -1634,7 +1634,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.6.01';
+const GAME_VERSION = '0.6.02';
 
 const HERO_CLASSES = [
   {
@@ -2445,12 +2445,16 @@ function combatTick() {
     return;
   }
   
-  // Boss mechanics
-  if (combat.isBoss && enemiesAlive.length > 0) {
-    const boss = enemiesAlive[0];
+  // Boss mechanics — find the actual boss in the enemy list (not enemiesAlive[0]).
+  // If the boss is dead but adds remain (e.g., killed Hive Queen with summoned
+  // swarmlings still up), enemiesAlive[0] would be a swarmling without a .boss
+  // property and bossDef.mechanic would throw, freezing the combat tick.
+  if (combat.isBoss) {
+    const boss = combat.enemyUnits.find(u => u.isBoss && !u.dead);
+    if (boss) {
     const bossDef = boss.boss;
     const hpPct = boss.hp / boss.maxHp;
-    
+
     // Shield mechanic
     if ((bossDef.mechanic === 'shield' || bossDef.mechanic === 'all') && !boss.shieldUsed && hpPct <= (bossDef.shieldPct || 0.5)) {
       boss.maxShield = Math.floor(boss.maxHp * 0.3);
@@ -2458,14 +2462,14 @@ function combatTick() {
       boss.shieldUsed = true;
       log(`⚡ ${boss.name} raises a shield!`, 'boss');
     }
-    
+
     // Enrage mechanic
     if ((bossDef.mechanic === 'enrage' || bossDef.mechanic === 'all') && !boss.enraged && hpPct <= (bossDef.enrageAt || 0.3)) {
       boss.atk = Math.floor(boss.atk * 2);
       boss.enraged = true;
       log(`🔥 ${boss.name} ENRAGES! Damage doubled!`, 'boss');
     }
-    
+
     // Summon mechanic
     if ((bossDef.mechanic === 'summon' || bossDef.mechanic === 'all')) {
       combat.bossMechanicTimer += TICK_SEC;
@@ -2489,8 +2493,10 @@ function combatTick() {
         log(`🕷️ ${boss.name} summons Swarmling!`, 'boss');
       }
     }
+    }
   }
-  
+
+
   // Regeneration Field: passive HP regen for living heroes
   const regenPctPerSec = getSkillBonus('regen_pct');
   if (regenPctPerSec > 0) {

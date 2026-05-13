@@ -18,6 +18,13 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.6.02] — Boss + Adds Freeze Fix
+
+### Fixed
+- **Game freeze after killing a summon-mechanic boss while adds remain.** Affected the F25 Hive Queen and the F200 Sovereign (`mechanic: 'all'`). The boss-mechanics block was reading `enemiesAlive[0]`, which became a summoned swarmling once the boss died. Swarmlings have no `.boss` property, so the very next line (`bossDef.mechanic`) threw and bricked the combat tick — heroes stopped attacking, swarmlings kept hitting, squad eventually wiped, retreat-1-floor swallowed the kill. Fix uses `combat.enemyUnits.find(u => u.isBoss && !u.dead)` so the block is skipped once the boss is down, letting the normal hero-attack loop finish off the adds and trigger victory.
+
+---
+
 ## [0.6.01] — Hidden DEV Panel
 
 ### Added
