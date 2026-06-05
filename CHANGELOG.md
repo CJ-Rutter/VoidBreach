@@ -18,6 +18,22 @@ Future ideas being considered. See [PROJECT_NOTES.md](PROJECT_NOTES.md) for the 
 
 ---
 
+## [0.6.03] — Offline Rebalance
+
+### Fixed
+- **Offline credits scaled exponentially with floor**, making mid-game runaway. Previous formula was `5 × 1.15^floor × elapsedSec × 0.3`, which at floor 50 yielded ~46M credits per 8-hour idle — enough to max every hero in one night, while active play at the same floor only generates ~10 credits/sec. Replaced with `(3 + floor × 0.25) × 0.5 efficiency`, which is linear in floor and lands offline yield at roughly 50% of active-play rate.
+- **Offline runs granted only credits** — no scrap, no loot. Returning players saw a wallet full of cash they couldn't spend on gear because their inventory was empty. Offline now also rolls scrap (at the same ~1:3 credit ratio enemies drop) and attempts loot drops at the standard chance, capped at 24 rolls per offline session (1 per 5 min elapsed) so overnight idle can't flood the inventory.
+
+### Changed
+- `ensureStats()` now backfills every key on `state.stats` individually, not just on the whole-object miss. Older saves were vulnerable to `NaN` if any new stat field had been added but not explicitly defaulted. Offline progress now writes to `lifetimeCredits` / `lifetimeScrap` / `rarityCounts` / `itemsFound`, so this had to be airtight.
+- Moved `ensureStats()` call in `loadGame` to *before* the offline-progress block (was after) so offline writes to stats see initialized values.
+
+### Notes
+- Offline progress modal now shows credits + scrap + item count instead of just credits.
+- Active-play economy is untouched — the runaway was entirely on the offline side.
+
+---
+
 ## [0.6.02] — Boss + Adds Freeze Fix
 
 ### Fixed

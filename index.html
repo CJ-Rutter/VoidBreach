@@ -1634,7 +1634,7 @@
 <script>
 // ============ GAME DATA ============
 
-const GAME_VERSION = '0.6.02';
+const GAME_VERSION = '0.6.03';
 
 const HERO_CLASSES = [
   {
@@ -2072,10 +2072,29 @@ function ensureStats() {
       bossesEncountered: 0
     };
   }
-  // Backfill any missing keys
-  if (!state.stats.enemyKillsByType) state.stats.enemyKillsByType = {};
-  if (!state.stats.bossKillsByName) state.stats.bossKillsByName = {};
-  if (!state.stats.rarityCounts) state.stats.rarityCounts = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+  // Backfill any missing keys — important: a save can have state.stats but be
+  // missing individual fields added in later versions. Anything read or
+  // incremented elsewhere needs a fallback here or we get NaN.
+  const s = state.stats;
+  if (s.startTime == null) s.startTime = Date.now();
+  if (s.playtimeMs == null) s.playtimeMs = 0;
+  if (s.enemiesKilled == null) s.enemiesKilled = 0;
+  if (s.bossesKilled == null) s.bossesKilled = 0;
+  if (!s.enemyKillsByType) s.enemyKillsByType = {};
+  if (!s.bossKillsByName) s.bossKillsByName = {};
+  if (s.damageDealt == null) s.damageDealt = 0;
+  if (s.damageTaken == null) s.damageTaken = 0;
+  if (s.biggestHit == null) s.biggestHit = 0;
+  if (s.crits == null) s.crits = 0;
+  if (s.heroDeaths == null) s.heroDeaths = 0;
+  if (s.lifetimeCredits == null) s.lifetimeCredits = 0;
+  if (s.lifetimeScrap == null) s.lifetimeScrap = 0;
+  if (s.itemsFound == null) s.itemsFound = 0;
+  if (s.itemsSold == null) s.itemsSold = 0;
+  if (s.itemsUpgraded == null) s.itemsUpgraded = 0;
+  if (!s.rarityCounts) s.rarityCounts = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+  if (s.floorsCleared == null) s.floorsCleared = 0;
+  if (s.bossesEncountered == null) s.bossesEncountered = 0;
 }
 
 function format(n) {
@@ -4057,27 +4076,66 @@ function loadGame(silent) {
       if (state.squad.length === 0) state.squad = ['marine']; // ultimate fallback
     }
     
-    // Offline progress — award some credits based on time away
+    // ensureStats() before offline so we can safely write to lifetime stats /
+    // rarity counts when generating offline loot. Was after offline pre-v0.6.03.
+    ensureStats();
+
+    // Offline progress — credits, scrap, AND a handful of loot rolls.
+    // Pre-v0.6.03 used a floorRate of 5 * 1.15^floor (exponential): at floor 50
+    // that's ~5,400 cr/sec, 8h ≈ 46M credits — enough to max every hero in one
+    // night. New formula is linear in floor and roughly tracks active-play
+    // economy (~ baseCredits × (1 + floor/2) per enemy × a few enemies / floor),
+    // landing offline at ~50% of active play. Caps at 8h so multi-day idle
+    // isn't a free max. Scrap and loot were silently missing entirely.
     const elapsedSec = Math.min(8*3600, (Date.now() - data.timestamp) / 1000);
     if (elapsedSec > 60) {
-      const floorRate = Math.floor(5 * Math.pow(1.15, state.floor)); // est credits/sec
-      const offlineGain = Math.floor(floorRate * elapsedSec * 0.3);
-      if (offlineGain > 0) {
-        state.credits += offlineGain;
+      const floorRate = 3 + state.floor * 0.25;
+      const efficiency = 0.5; // offline yield vs active
+      const credBonus = 1 + getSkillBonus('credits_pct');
+      const scrapBonus = 1 + getSkillBonus('scrap_pct');
+      const offlineCredits = Math.floor(floorRate * elapsedSec * efficiency * credBonus);
+      // Per-enemy scrap is ~1/3 of credits, so scale offline scrap by the same.
+      const offlineScrap = Math.floor(floorRate * elapsedSec * efficiency * 0.33 * scrapBonus);
+
+      // Loot rolls: 1 attempt per 5 min offline, capped at 24, standard drop chance.
+      // Caps keep overnight idle from drowning inventory.
+      const rolls = Math.min(24, Math.floor(elapsedSec / 300));
+      const dropChance = 0.15 + state.floor * 0.002 + getSkillBonus('drop_chance');
+      const dropped = [];
+      for (let i = 0; i < rolls; i++) {
+        if (Math.random() < dropChance) {
+          const item = generateLoot(state.floor);
+          state.inventory.push(item);
+          state.stats.itemsFound++;
+          state.stats.rarityCounts[RARITY_NAMES[item.rarity]]++;
+          dropped.push(item);
+        }
+      }
+
+      if (offlineCredits > 0 || offlineScrap > 0 || dropped.length > 0) {
+        state.credits += offlineCredits;
+        state.scrap += offlineScrap;
+        state.stats.lifetimeCredits += offlineCredits;
+        state.stats.lifetimeScrap += offlineScrap;
+
         const hours = Math.floor(elapsedSec / 3600);
         const mins = Math.floor((elapsedSec % 3600) / 60);
         const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        const lootLine = dropped.length > 0
+          ? `<br>+ <b>${dropped.length} salvage item${dropped.length === 1 ? '' : 's'}</b>`
+          : '';
         setTimeout(() => {
-          showModal('🌙 OFFLINE OPERATIONS', 
-            `Your squad continued salvage ops for <b>${timeStr}</b>.<br><br>Recovered: <b>${format(offlineGain)} credits</b>`, 
+          showModal('🌙 OFFLINE OPERATIONS',
+            `Your squad continued salvage ops for <b>${timeStr}</b>.<br><br>` +
+            `Recovered: <b>${format(offlineCredits)} credits</b> + <b>${format(offlineScrap)}⚙ scrap</b>` +
+            lootLine,
             () => {});
         }, 300);
       }
     }
-    
+
     // Reset playtime tracker so we don't double-count loading time
     _lastPlaytimeUpdate = Date.now();
-    ensureStats();
     
     setupCombat();
     renderAll();
